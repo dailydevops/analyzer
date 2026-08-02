@@ -1,0 +1,15 @@
+<Project>
+  <PropertyGroup Label="Package settings">
+    <Title>$(MSBuildProjectName)</Title>
+    <Description></Description>
+    <RepositoryUrl></RepositoryUrl>
+    <PackageProjectUrl></PackageProjectUrl>
+    <PackageReleaseNotes>$(PackageProjectUrl)/releases</PackageReleaseNotes>
+    <PackageTags></PackageTags>
+    <CopyrightYearStart>2024</CopyrightYearStart>
+  </PropertyGroup>
+  <PropertyGroup>
+    <!-- Workaround, until https://github.com/GitTools/GitVersion/pull/4206 is released -->
+    <GitVersionTargetFramework>net8.0</GitVersionTargetFramework>
+  </PropertyGroup>
+</Project>
