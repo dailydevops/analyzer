@@ -32,5 +32,5 @@ jobs:
     with:
       dotnetLogging: ${{ inputs.dotnet-logging }}
       dotnetVersion: ${{ vars.NE_DOTNET_TARGETFRAMEWORKS }}
-      solution: ###SOLUTION###
+      solution: ./Analyzer.slnx
     secrets: inherit
