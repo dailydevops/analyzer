@@ -1,0 +1,136 @@
+name: 🔍 Analyzer Proposal
+description: |
+  Use this template to propose a new analyzer (and optional code fix) for the package. Describe the need, the concrete behavior, and the impact so the rule can be scoped and standardized.
+title: "analyzer: <replace with a short description>"
+labels:
+  - type:feature
+  - state:investigate
+body:
+  - type: markdown
+    attributes:
+      value: |
+        Thanks for proposing a new analyzer! Please fill out the sections below.
+        The more precise the examples and the configuration surface, the faster the rule can be implemented and reviewed.
+
+  - type: checkboxes
+    id: prerequisites
+    attributes:
+      label: Prerequisites
+      description: Please confirm the following before submitting.
+      options:
+        - label: I have searched for similar analyzer proposals in both open and closed issues
+          required: true
+        - label: I have confirmed no existing rule (this package, Roslyn, Meziantou, Sonar, Roslynator) already covers this
+          required: true
+
+  - type: textarea
+    id: need
+    attributes:
+      label: Need & Action (Bedarf & Handlung)
+      description: What problem does this rule address, and what action should it enforce or suggest? State the rule as a single, testable sentence.
+      placeholder: |
+        Need: ...
+        Action: The analyzer should report when ... and suggest ...
+    validations:
+      required: true
+
+  - type: textarea
+    id: impact
+    attributes:
+      label: Impact
+      description: Who and what is affected — maintainability, discoverability, tooling, build times, existing code bases. Note any expected volume of diagnostics on real projects.
+      placeholder: |
+        - Improves ... for ...
+        - Expected to flag ~N occurrences in a typical project
+        - Risk / churn: ...
+    validations:
+      required: true
+
+  - type: textarea
+    id: noncompliant
+    attributes:
+      label: Non-compliant example
+      description: Minimal C# that should trigger the diagnostic.
+      render: csharp
+    validations:
+      required: true
+
+  - type: textarea
+    id: compliant
+    attributes:
+      label: Compliant example
+      description: The same code, corrected — this is also the target state for the code fix, if any.
+      render: csharp
+    validations:
+      required: true
+
+  - type: dropdown
+    id: category
+    attributes:
+      label: Diagnostic category
+      description: The Microsoft diagnostic category the rule belongs to (mirrors the source-tree folder).
+      options:
+        - Design
+        - Documentation
+        - Globalization
+        - Interoperability
+        - Maintainability
+        - Naming
+        - Performance
+        - Reliability
+        - Security
+        - Style
+        - Usage
+    validations:
+      required: true
+
+  - type: dropdown
+    id: severity
+    attributes:
+      label: Default severity
+      description: The suggested default severity for the diagnostic.
+      options:
+        - Error
+        - Warning
+        - Info / Suggestion
+        - Hidden
+    validations:
+      required: true
+
+  - type: dropdown
+    id: codefix
+    attributes:
+      label: Code fix
+      description: Is an automatic code fix feasible and desired?
+      options:
+        - "Yes — feasible and in scope"
+        - "Maybe — feasible but out of initial scope"
+        - "No — diagnostic only"
+    validations:
+      required: true
+
+  - type: textarea
+    id: configuration
+    attributes:
+      label: Configuration & build properties
+      description: MSBuild properties or .editorconfig options that toggle or tune the rule (opt-outs, thresholds, exceptions). State the default value for each.
+      placeholder: |
+        - `NetEvolveAnalyzer...` (bool, default false) — ...
+    validations:
+      required: false
+
+  - type: textarea
+    id: edge_cases
+    attributes:
+      label: Edge cases & exceptions
+      description: Known situations where the rule should stay silent (generated code, partials, nested types, generic overloads, single-file deployment, ...).
+    validations:
+      required: false
+
+  - type: textarea
+    id: additional_context
+    attributes:
+      label: Additional context
+      description: Prior art, links to comparable rules, or anything else that helps.
+    validations:
+      required: false
