@@ -1,6 +1,7 @@
 namespace NetEvolve.Analyzer.Tests.Integration.Maintainability;
 
 using System;
+using System.Linq;
 using System.Threading.Tasks;
 using Microsoft.CodeAnalysis.CodeFixes;
 using NetEvolve.Analyzer.Maintainability;
@@ -160,5 +161,40 @@ public sealed class OneTypePerFileFixAllTests
         }
 
         await Assert.That(caught).IsNotNull();
+    }
+
+    [Test]
+    public async Task Solution_NoViolations_ReturnsUnchanged()
+    {
+        const string source = """
+            namespace Geometry;
+
+            public sealed class Circle { }
+            """;
+
+        var result = await FixAllRunner
+            .FixAllAsync([("Circle.cs", source)], FixAllScope.Solution)
+            .ConfigureAwait(false);
+
+        await Assert.That(result.Count).IsEqualTo(1);
+        await Assert.That(result.ContainsKey("Circle.cs")).IsTrue();
+    }
+
+    [Test]
+    public async Task GetSupportedFixAllScopes_AreDocumentProjectSolution()
+    {
+        var scopes = OneTypePerFileFixAllProvider.Instance.GetSupportedFixAllScopes().ToList();
+
+        await Assert.That(scopes).Contains(FixAllScope.Document);
+        await Assert.That(scopes).Contains(FixAllScope.Project);
+        await Assert.That(scopes).Contains(FixAllScope.Solution);
+    }
+
+    [Test]
+    public async Task GetFixAllProvider_ReturnsCustomProvider()
+    {
+        var provider = new OneTypePerFileCodeFixProvider().GetFixAllProvider();
+
+        await Assert.That(provider).IsSameReferenceAs(OneTypePerFileFixAllProvider.Instance);
     }
 }

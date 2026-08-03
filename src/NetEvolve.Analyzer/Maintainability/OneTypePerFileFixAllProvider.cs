@@ -130,11 +130,8 @@ internal sealed class OneTypePerFileFixAllProvider : FixAllProvider
         CancellationToken cancellationToken
     )
     {
-        var document = solution.GetDocument(id);
-        if (document is null)
-        {
-            return null;
-        }
+        // The id always comes from TargetDocumentIds enumerating the current solution, so the document exists.
+        var document = solution.GetDocument(id)!;
 
         var diagnostics = await ResolveDiagnosticsAsync(solution, document, id, cancellationToken)
             .ConfigureAwait(false);
