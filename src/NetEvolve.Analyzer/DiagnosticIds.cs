@@ -29,6 +29,11 @@ internal static class DiagnosticIds
     /// </summary>
     public const string NE0002 = Prefix + "0002";
 
+    /// <summary>
+    /// NE0003 — a file should declare exactly one namespace.
+    /// </summary>
+    public const string NE0003 = Prefix + "0003";
+
     /// <summary>Builds the documentation help link for a diagnostic identifier.</summary>
     /// <param name="diagnosticId">The diagnostic identifier, e.g. <c>NE0001</c>.</param>
     /// <returns>An absolute URI pointing at the rule's documentation.</returns>
