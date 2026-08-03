@@ -7,5 +7,7 @@
     <CompilerVisibleProperty Include="PublishSingleFile" />
     <CompilerVisibleProperty Include="NetEvolveAnalyzerDisableFileOrganizationRules" />
     <CompilerVisibleProperty Include="NetEvolveAnalyzerGroupGenericOverloads" />
+    <CompilerVisibleProperty Include="RootNamespace" />
+    <CompilerVisibleProperty Include="ProjectDir" />
   </ItemGroup>
 </Project>

@@ -27,4 +27,14 @@ internal static class BuildProperty
     /// a single file named after the base identifier.
     /// </summary>
     public const string GroupGenericOverloads = Prefix + "NetEvolveAnalyzerGroupGenericOverloads";
+
+    /// <summary>
+    /// <c>RootNamespace</c> — the namespace anchor NE0002 uses as the root of the folder-derived namespace.
+    /// </summary>
+    public const string RootNamespace = Prefix + "RootNamespace";
+
+    /// <summary>
+    /// <c>ProjectDir</c> — the project directory NE0002 measures a file's folder path against.
+    /// </summary>
+    public const string ProjectDir = Prefix + "ProjectDir";
 }

@@ -6,3 +6,4 @@
 Rule ID | Category | Severity | Notes
 --------|----------|----------|-------
 NE0001 | Maintainability | Warning | OneTypePerFileAnalyzer, [Documentation](https://github.com/dailydevops/analyzer/blob/main/docs/rules/NE0001.md)
+NE0002 | Maintainability | Warning | NamespaceMatchesFolderAnalyzer, [Documentation](https://github.com/dailydevops/analyzer/blob/main/docs/rules/NE0002.md)

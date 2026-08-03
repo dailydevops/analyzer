@@ -24,6 +24,11 @@ internal static class DiagnosticIds
     /// </summary>
     public const string NE0001 = Prefix + "0001";
 
+    /// <summary>
+    /// NE0002 — the declared namespace should match the folder structure, anchored at <c>RootNamespace</c>.
+    /// </summary>
+    public const string NE0002 = Prefix + "0002";
+
     /// <summary>Builds the documentation help link for a diagnostic identifier.</summary>
     /// <param name="diagnosticId">The diagnostic identifier, e.g. <c>NE0001</c>.</param>
     /// <returns>An absolute URI pointing at the rule's documentation.</returns>
