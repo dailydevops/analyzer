@@ -3,6 +3,7 @@ namespace NetEvolve.Analyzer.Tests.Integration.Maintainability;
 using System;
 using System.Threading.Tasks;
 using NetEvolve.Analyzer.Maintainability;
+using NetEvolve.Analyzer.Providers;
 using TUnit.Assertions;
 using TUnit.Assertions.Extensions;
 using TUnit.Core;
@@ -163,10 +164,11 @@ public sealed class SingleNamespacePerFileCodeFixTests
     }
 
     [Test]
-    public async Task GetFixAllProvider_ReturnsNull()
+    public async Task GetFixAllProvider_ReturnsCustomProvider()
     {
-        var provider = new SingleNamespacePerFileCodeFixProvider();
+        var provider = new SingleNamespacePerFileCodeFixProvider().GetFixAllProvider();
 
-        await Assert.That(provider.GetFixAllProvider()).IsNull();
+        await Assert.That(provider).IsSameReferenceAs(new SingleNamespacePerFileCodeFixProvider().GetFixAllProvider());
+        await Assert.That(provider!.GetType()).IsEqualTo(typeof(SequentialFixAllProvider));
     }
 }

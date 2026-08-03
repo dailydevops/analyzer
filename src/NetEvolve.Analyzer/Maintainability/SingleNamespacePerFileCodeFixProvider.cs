@@ -1,11 +1,10 @@
-namespace NetEvolve.Analyzer.Maintainability;
+﻿namespace NetEvolve.Analyzer.Maintainability;
 
 using System;
 using System.Collections.Generic;
 using System.Collections.Immutable;
 using System.Composition;
 using System.Linq;
-using System.Text;
 using System.Threading;
 using System.Threading.Tasks;
 using Microsoft.CodeAnalysis;
@@ -13,6 +12,8 @@ using Microsoft.CodeAnalysis.CodeActions;
 using Microsoft.CodeAnalysis.CodeFixes;
 using Microsoft.CodeAnalysis.CSharp.Syntax;
 using Microsoft.CodeAnalysis.Text;
+using NetEvolve.Analyzer.Builders;
+using NetEvolve.Analyzer.Providers;
 
 /// <summary>
 /// Code fix for <see cref="SingleNamespacePerFileAnalyzer">NE0003</see>. Offered only for the nested shape
@@ -23,12 +24,18 @@ using Microsoft.CodeAnalysis.Text;
 [Shared]
 public sealed class SingleNamespacePerFileCodeFixProvider : CodeFixProvider
 {
+    private static readonly Lazy<SequentialFixAllProvider> FixAll = new(
+        () => new SequentialFixAllProvider(() => new SingleNamespacePerFileAnalyzer()),
+        LazyThreadSafetyMode.ExecutionAndPublication
+    );
+
     /// <inheritdoc />
     public override ImmutableArray<string> FixableDiagnosticIds { get; } = ImmutableArray.Create(DiagnosticIds.NE0003);
 
     /// <inheritdoc />
-    // A whole-file rewrite does not compose safely across many diagnostics, so no batch fix-all.
-    public override FixAllProvider? GetFixAllProvider() => null;
+    // Flattening a nested file is a whole-file rewrite; the sequential fix-all re-resolves after each file so
+    // a batch across several files converges to a fixed point.
+    public override FixAllProvider? GetFixAllProvider() => FixAll.Value;
 
     /// <inheritdoc />
     public override async Task RegisterCodeFixesAsync(CodeFixContext context)
@@ -73,10 +80,12 @@ public sealed class SingleNamespacePerFileCodeFixProvider : CodeFixProvider
     {
         var root = (CompilationUnitSyntax)(await document.GetSyntaxRootAsync(cancellationToken).ConfigureAwait(false))!;
 
-        // Preserve the original file's final-newline style: trim trailing blank lines left by the rewrite, then
-        // re-add a single newline only if the source had one.
+        var members = NamespaceFileBuilder.TopLevelTypeDeclarations(root).ToList();
         var endsWithNewline = root.ToFullString().EndsWith("\n", StringComparison.Ordinal);
-        var newText = WithTrailingNewline(BuildNewFileText(root, target), endsWithNewline);
+        var newText = NamespaceFileBuilder.WithTrailingNewline(
+            NamespaceFileBuilder.Build(root, target, members),
+            endsWithNewline
+        );
 
         return document.WithText(SourceText.From(newText));
     }
@@ -90,59 +99,6 @@ public sealed class SingleNamespacePerFileCodeFixProvider : CodeFixProvider
 
         return FolderNamespace.TryResolve(options, filePath, out var expected) ? expected : NamespaceChain(declaration);
     }
-
-    private static string BuildNewFileText(CompilationUnitSyntax root, string namespaceName)
-    {
-        // Assemble the new file as text: the file-level usings, a single file-scoped namespace, then every
-        // top-level type rendered at column 0 so its (possibly nested) indentation is dropped and leading doc
-        // comments travel with it.
-        var builder = new StringBuilder();
-
-        foreach (var directive in root.Usings)
-        {
-            _ = builder.Append(directive.ToString()).Append('\n');
-        }
-
-        if (root.Usings.Count != 0)
-        {
-            _ = builder.Append('\n');
-        }
-
-        _ = builder.Append("namespace ").Append(namespaceName).Append(";\n\n");
-
-        var members = root.DescendantNodes().Where(IsTopLevelTypeDeclaration).Cast<MemberDeclarationSyntax>();
-        return builder.Append(string.Join("\n\n", members.Select(RenderMember))).ToString();
-    }
-
-    private static string WithTrailingNewline(string text, bool trailingNewline) =>
-        trailingNewline ? text.TrimEnd() + "\n" : text.TrimEnd();
-
-    // Renders a top-level member at column 0, keeping its leading doc comments/comments and inner blank lines but
-    // dropping the surrounding blank lines and the indentation it had in its original (nested) context.
-    private static string RenderMember(MemberDeclarationSyntax member)
-    {
-        var lines = member.ToFullString().Replace("\r\n", "\n").Split('\n').ToList();
-
-        while (lines.Count != 0 && lines[0].Trim().Length == 0)
-        {
-            lines.RemoveAt(0);
-        }
-
-        while (lines.Count != 0 && lines[lines.Count - 1].Trim().Length == 0)
-        {
-            lines.RemoveAt(lines.Count - 1);
-        }
-
-        var indent = lines[0].Length - lines[0].TrimStart().Length;
-        return string.Join(
-            "\n",
-            lines.Select(line => line.Length >= indent ? line.Substring(indent) : line.TrimStart())
-        );
-    }
-
-    private static bool IsTopLevelTypeDeclaration(SyntaxNode node) =>
-        node is BaseTypeDeclarationSyntax or DelegateDeclarationSyntax
-        && node.Parent is BaseNamespaceDeclarationSyntax or CompilationUnitSyntax;
 
     private static string NamespaceChain(SyntaxNode node)
     {

@@ -1,4 +1,4 @@
-namespace NetEvolve.Analyzer.Maintainability;
+namespace NetEvolve.Analyzer.Providers;
 
 using System;
 using System.Collections.Generic;
@@ -12,15 +12,25 @@ using Microsoft.CodeAnalysis.CodeFixes;
 using Microsoft.CodeAnalysis.Diagnostics;
 
 /// <summary>
-/// Custom fix-all for <see cref="OneTypePerFileCodeFixProvider">NE0001</see>. The single-diagnostic fix uses
-/// solution-level operations (<c>WithDocumentName</c>, <c>AddDocument</c>) and overlapping edits to a single
-/// multi-type file, none of which the default batch fixer can compose. Instead this provider applies the
-/// rename/move fixes one at a time and re-resolves diagnostics between each step, iterating to a fixed point.
+/// A custom fix-all that applies a code fix one diagnostic at a time, re-resolving diagnostics from the
+/// accumulating solution after each step until it reaches a fixed point. Some fixes cannot compose through the
+/// default batch fixer: NE0001's rename/move uses solution-level operations (<c>WithDocumentName</c>,
+/// <c>AddDocument</c>) and overlapping edits to a single file, and NE0003's flatten is a whole-file rewrite. The
+/// code fix to run and the diagnostics to match are taken from the <see cref="FixAllContext"/>; the analyzer
+/// used to re-resolve between steps is supplied per rule through the constructor.
 /// </summary>
-internal sealed class OneTypePerFileFixAllProvider : FixAllProvider
+internal sealed class SequentialFixAllProvider : FixAllProvider
 {
-    /// <summary>The shared instance returned by <see cref="OneTypePerFileCodeFixProvider.GetFixAllProvider"/>.</summary>
-    public static OneTypePerFileFixAllProvider Instance { get; } = new OneTypePerFileFixAllProvider();
+    private readonly Func<DiagnosticAnalyzer> _analyzerFactory;
+
+    /// <summary>
+    /// Creates the provider for a single rule.
+    /// </summary>
+    /// <param name="analyzerFactory">
+    /// Produces a fresh instance of the rule's analyzer, run after each step to re-resolve diagnostics against
+    /// the accumulated solution.
+    /// </param>
+    public SequentialFixAllProvider(Func<DiagnosticAnalyzer> analyzerFactory) => _analyzerFactory = analyzerFactory;
 
     /// <inheritdoc />
     public override IEnumerable<FixAllScope> GetSupportedFixAllScopes() =>
@@ -40,9 +50,9 @@ internal sealed class OneTypePerFileFixAllProvider : FixAllProvider
         }
 
         return CodeAction.Create(
-            $"Fix all '{DiagnosticIds.NE0001}' occurrences",
+            $"Fix all '{string.Join("', '", fixAllContext.DiagnosticIds)}' occurrences",
             cancellationToken => FixAllAsync(fixAllContext, cancellationToken),
-            equivalenceKey: nameof(OneTypePerFileFixAllProvider)
+            equivalenceKey: nameof(SequentialFixAllProvider)
         );
     }
 
@@ -77,10 +87,10 @@ internal sealed class OneTypePerFileFixAllProvider : FixAllProvider
         return false;
     }
 
-    // Applies one rename/move at a time, re-resolving diagnostics from the accumulating solution after each
-    // step. Convergence and the move->rename flip fall out of the re-resolution; the collision case (target
-    // name equals the current file) registers no action and is therefore passed over without failing.
-    private static async Task<Solution> FixAllAsync(FixAllContext fixAllContext, CancellationToken cancellationToken)
+    // Applies one fix at a time, re-resolving diagnostics from the accumulating solution after each step.
+    // Convergence (and NE0001's move->rename flip) falls out of the re-resolution; a diagnostic whose fix
+    // registers no action (e.g. NE0001's collision case) is passed over without failing.
+    private async Task<Solution> FixAllAsync(FixAllContext fixAllContext, CancellationToken cancellationToken)
     {
         var solution = fixAllContext.Solution;
         var scope = fixAllContext.Scope;
@@ -91,7 +101,7 @@ internal sealed class OneTypePerFileFixAllProvider : FixAllProvider
         {
             cancellationToken.ThrowIfCancellationRequested();
 
-            var next = await TryApplyOneAsync(solution, scope, documentId, projectId, cancellationToken)
+            var next = await TryApplyOneAsync(fixAllContext, solution, scope, documentId, projectId, cancellationToken)
                 .ConfigureAwait(false);
             if (next is null)
             {
@@ -102,7 +112,8 @@ internal sealed class OneTypePerFileFixAllProvider : FixAllProvider
         }
     }
 
-    private static async Task<Solution?> TryApplyOneAsync(
+    private async Task<Solution?> TryApplyOneAsync(
+        FixAllContext fixAllContext,
         Solution solution,
         FixAllScope scope,
         DocumentId? documentId,
@@ -112,7 +123,8 @@ internal sealed class OneTypePerFileFixAllProvider : FixAllProvider
     {
         foreach (var id in TargetDocumentIds(solution, scope, documentId, projectId))
         {
-            var changed = await TryFixDocumentAsync(solution, id, cancellationToken).ConfigureAwait(false);
+            var changed = await TryFixDocumentAsync(fixAllContext, solution, id, cancellationToken)
+                .ConfigureAwait(false);
             if (changed is not null)
             {
                 return changed;
@@ -122,9 +134,10 @@ internal sealed class OneTypePerFileFixAllProvider : FixAllProvider
         return null;
     }
 
-    // Runs the analyzer over the document's project, then applies the first NE0001 diagnostic in the document
-    // (by source order) that yields an action. Returns null when the document has no applicable fix.
-    private static async Task<Solution?> TryFixDocumentAsync(
+    // Re-resolves the rule's diagnostics in the document, then applies the first one (by source order) that
+    // yields an action through the context's code fix provider. Returns null when the document has no fix.
+    private async Task<Solution?> TryFixDocumentAsync(
+        FixAllContext fixAllContext,
         Solution solution,
         DocumentId id,
         CancellationToken cancellationToken
@@ -133,9 +146,9 @@ internal sealed class OneTypePerFileFixAllProvider : FixAllProvider
         // The id always comes from TargetDocumentIds enumerating the current solution, so the document exists.
         var document = solution.GetDocument(id)!;
 
-        var diagnostics = await ResolveDiagnosticsAsync(solution, document, id, cancellationToken)
+        var diagnostics = await ResolveDiagnosticsAsync(fixAllContext, solution, document, id, cancellationToken)
             .ConfigureAwait(false);
-        var fixProvider = new OneTypePerFileCodeFixProvider();
+        var fixProvider = fixAllContext.CodeFixProvider;
 
         foreach (var diagnostic in diagnostics)
         {
@@ -150,9 +163,10 @@ internal sealed class OneTypePerFileFixAllProvider : FixAllProvider
         return null;
     }
 
-    // The NE0001 diagnostics located in the document, ordered by source position, resolved from a fresh run of
-    // the analyzer over the current project so each pass sees the accumulated edits.
-    private static async Task<List<Diagnostic>> ResolveDiagnosticsAsync(
+    // The rule's diagnostics located in the document, ordered by source position, resolved from a fresh run of
+    // the per-rule analyzer over the current project so each pass sees the accumulated edits.
+    private async Task<List<Diagnostic>> ResolveDiagnosticsAsync(
+        FixAllContext fixAllContext,
         Solution solution,
         Document document,
         DocumentId id,
@@ -166,7 +180,7 @@ internal sealed class OneTypePerFileFixAllProvider : FixAllProvider
         // GetAnalyzerDiagnosticsAsync below.
 #pragma warning disable S8949
         var withAnalyzers = compilation.WithAnalyzers(
-            ImmutableArray.Create<DiagnosticAnalyzer>(new OneTypePerFileAnalyzer()),
+            ImmutableArray.Create(_analyzerFactory()),
             project.AnalyzerOptions
         );
 #pragma warning restore S8949
@@ -174,7 +188,7 @@ internal sealed class OneTypePerFileFixAllProvider : FixAllProvider
         var diagnostics = await withAnalyzers.GetAnalyzerDiagnosticsAsync(cancellationToken).ConfigureAwait(false);
 
         return diagnostics
-            .Where(diagnostic => string.Equals(diagnostic.Id, DiagnosticIds.NE0001, StringComparison.Ordinal))
+            .Where(diagnostic => fixAllContext.DiagnosticIds.Contains(diagnostic.Id))
             .Where(diagnostic =>
                 diagnostic.Location.SourceTree is not null
                 && solution.GetDocument(diagnostic.Location.SourceTree)?.Id == id
@@ -184,9 +198,9 @@ internal sealed class OneTypePerFileFixAllProvider : FixAllProvider
     }
 
     // Registers the single-diagnostic fix and applies its first change. Returns null when no action is offered
-    // (the collision case, where the target file equals the current file), skipping without failing the batch.
+    // (e.g. NE0001's collision case, where the target file equals the current file), skipping without failing.
     private static async Task<Solution?> TryApplyFixAsync(
-        OneTypePerFileCodeFixProvider fixProvider,
+        CodeFixProvider fixProvider,
         Document document,
         Diagnostic diagnostic,
         CancellationToken cancellationToken

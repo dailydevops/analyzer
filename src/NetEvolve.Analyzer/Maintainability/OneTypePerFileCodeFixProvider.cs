@@ -1,4 +1,4 @@
-namespace NetEvolve.Analyzer.Maintainability;
+﻿namespace NetEvolve.Analyzer.Maintainability;
 
 using System;
 using System.Collections.Generic;
@@ -6,15 +6,15 @@ using System.Collections.Immutable;
 using System.Composition;
 using System.IO;
 using System.Linq;
-using System.Text;
 using System.Threading;
 using System.Threading.Tasks;
 using Microsoft.CodeAnalysis;
 using Microsoft.CodeAnalysis.CodeActions;
 using Microsoft.CodeAnalysis.CodeFixes;
-using Microsoft.CodeAnalysis.CSharp;
 using Microsoft.CodeAnalysis.CSharp.Syntax;
 using Microsoft.CodeAnalysis.Text;
+using NetEvolve.Analyzer.Builders;
+using NetEvolve.Analyzer.Providers;
 
 /// <summary>
 /// Code fix for <see cref="OneTypePerFileAnalyzer">NE0001</see>. Offers to rename the file to match its single
@@ -25,13 +25,18 @@ using Microsoft.CodeAnalysis.Text;
 [Shared]
 public sealed class OneTypePerFileCodeFixProvider : CodeFixProvider
 {
+    private static readonly Lazy<SequentialFixAllProvider> FixAll = new(
+        () => new SequentialFixAllProvider(() => new OneTypePerFileAnalyzer()),
+        LazyThreadSafetyMode.ExecutionAndPublication
+    );
+
     /// <inheritdoc />
     public override ImmutableArray<string> FixableDiagnosticIds { get; } = ImmutableArray.Create(DiagnosticIds.NE0001);
 
     /// <inheritdoc />
     // Renaming and adding documents cannot compose through the default batch fixer, so a custom provider
     // applies the rename/move fixes sequentially and re-resolves diagnostics between each step.
-    public override FixAllProvider? GetFixAllProvider() => OneTypePerFileFixAllProvider.Instance;
+    public override FixAllProvider? GetFixAllProvider() => FixAll.Value;
 
     /// <inheritdoc />
     public override async Task RegisterCodeFixesAsync(CodeFixContext context)
@@ -41,7 +46,9 @@ public sealed class OneTypePerFileCodeFixProvider : CodeFixProvider
         var root = (await context.Document.GetSyntaxRootAsync(context.CancellationToken).ConfigureAwait(false))!;
         var diagnostic = context.Diagnostics[0];
         var declaration = (MemberDeclarationSyntax)
-            root.FindNode(diagnostic.Location.SourceSpan).AncestorsAndSelf().First(IsTopLevelTypeDeclaration);
+            root.FindNode(diagnostic.Location.SourceSpan)
+                .AncestorsAndSelf()
+                .First(NamespaceFileBuilder.IsTopLevelTypeDeclaration);
 
         var expectedName = diagnostic.Properties[OneTypePerFileAnalyzer.ExpectedFileNameProperty]!;
         var singleType = string.Equals(
@@ -111,15 +118,16 @@ public sealed class OneTypePerFileCodeFixProvider : CodeFixProvider
         var groupGenericOverloads = ReadGroupGenericOverloads(document);
         var moved = MatchingDeclarations(root, declaration, groupGenericOverloads).ToList();
 
-        // Preserve the original file's final-newline style: trim trailing blank lines left by the edit, then
-        // re-add a single newline only if the source had one.
         var endsWithNewline = root.ToFullString().EndsWith("\n", StringComparison.Ordinal);
-        var newText = WithTrailingNewline(BuildNewFileText(root, NamespaceName(declaration), moved), endsWithNewline);
+        var newText = NamespaceFileBuilder.WithTrailingNewline(
+            NamespaceFileBuilder.Build(root, NamespaceName(declaration), moved),
+            endsWithNewline
+        );
 
         // Move fires only when the file holds several type groups and exactly one group is relocated, so the
         // original always keeps at least one type (the last remaining single type becomes a rename instead).
         var removed = root.RemoveNodes(moved, SyntaxRemoveOptions.KeepNoTrivia)!;
-        var remainingText = WithTrailingNewline(removed.ToFullString(), endsWithNewline);
+        var remainingText = NamespaceFileBuilder.WithTrailingNewline(removed.ToFullString(), endsWithNewline);
 
         var newName = expectedName + ".cs";
         var newDocumentId = DocumentId.CreateNewId(document.Project.Id);
@@ -135,62 +143,6 @@ public sealed class OneTypePerFileCodeFixProvider : CodeFixProvider
             );
     }
 
-    private static string BuildNewFileText(
-        CompilationUnitSyntax root,
-        string namespaceName,
-        IReadOnlyList<MemberDeclarationSyntax> moved
-    )
-    {
-        // Assemble the new file as text. Always emit a file-scoped namespace with the FULL dotted name (so a
-        // type lifted out of a nested block namespace keeps its real namespace, and no block re-indentation is
-        // needed — which is what corrupted multi-line string literals). Members are rendered from their full
-        // text so leading doc comments travel with them.
-        var builder = new StringBuilder();
-
-        foreach (var directive in root.Usings)
-        {
-            _ = builder.Append(directive.ToString()).Append('\n');
-        }
-
-        if (root.Usings.Count != 0)
-        {
-            _ = builder.Append('\n');
-        }
-
-        if (namespaceName.Length != 0)
-        {
-            _ = builder.Append("namespace ").Append(namespaceName).Append(";\n\n");
-        }
-
-        return builder.Append(string.Join("\n\n", moved.Select(RenderMember))).ToString();
-    }
-
-    private static string WithTrailingNewline(string text, bool trailingNewline) =>
-        trailingNewline ? text.TrimEnd() + "\n" : text.TrimEnd();
-
-    // Renders a moved member at column 0, keeping its leading doc comments/comments and inner blank lines but
-    // dropping the surrounding blank lines and the indentation it had in its original (possibly nested) context.
-    private static string RenderMember(MemberDeclarationSyntax member)
-    {
-        var lines = member.ToFullString().Replace("\r\n", "\n").Split('\n').ToList();
-
-        while (lines.Count != 0 && lines[0].Trim().Length == 0)
-        {
-            lines.RemoveAt(0);
-        }
-
-        while (lines.Count != 0 && lines[lines.Count - 1].Trim().Length == 0)
-        {
-            lines.RemoveAt(lines.Count - 1);
-        }
-
-        var indent = lines[0].Length - lines[0].TrimStart().Length;
-        return string.Join(
-            "\n",
-            lines.Select(line => line.Length >= indent ? line.Substring(indent) : line.TrimStart())
-        );
-    }
-
     private static IEnumerable<MemberDeclarationSyntax> MatchingDeclarations(
         CompilationUnitSyntax root,
         MemberDeclarationSyntax declaration,
@@ -201,9 +153,8 @@ public sealed class OneTypePerFileCodeFixProvider : CodeFixProvider
         var arity = Arity(declaration);
         var @namespace = NamespaceName(declaration);
 
-        return root.DescendantNodes()
-            .Where(IsTopLevelTypeDeclaration)
-            .Cast<MemberDeclarationSyntax>()
+        return NamespaceFileBuilder
+            .TopLevelTypeDeclarations(root)
             .Where(member =>
                 string.Equals(Identifier(member).ValueText, name, StringComparison.Ordinal)
                 && string.Equals(NamespaceName(member), @namespace, StringComparison.Ordinal)
@@ -223,10 +174,6 @@ public sealed class OneTypePerFileCodeFixProvider : CodeFixProvider
         var directory = Path.GetDirectoryName(currentPath);
         return string.IsNullOrEmpty(directory) ? newName : Path.Combine(directory, newName);
     }
-
-    private static bool IsTopLevelTypeDeclaration(SyntaxNode node) =>
-        node is BaseTypeDeclarationSyntax or DelegateDeclarationSyntax
-        && node.Parent is BaseNamespaceDeclarationSyntax or CompilationUnitSyntax;
 
     private static SyntaxToken Identifier(MemberDeclarationSyntax member) =>
         member is BaseTypeDeclarationSyntax type ? type.Identifier : ((DelegateDeclarationSyntax)member).Identifier;

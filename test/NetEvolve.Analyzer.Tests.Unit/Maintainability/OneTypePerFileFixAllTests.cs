@@ -5,6 +5,7 @@ using System.Linq;
 using System.Threading.Tasks;
 using Microsoft.CodeAnalysis.CodeFixes;
 using NetEvolve.Analyzer.Maintainability;
+using NetEvolve.Analyzer.Providers;
 using TUnit.Assertions;
 using TUnit.Assertions.Extensions;
 using TUnit.Core;
@@ -123,7 +124,7 @@ public sealed class OneTypePerFileFixAllTests
     [Test]
     public async Task GetSupportedFixAllScopes_AreDocumentProjectSolution()
     {
-        var scopes = OneTypePerFileFixAllProvider.Instance.GetSupportedFixAllScopes().ToList();
+        var scopes = new OneTypePerFileCodeFixProvider().GetFixAllProvider()!.GetSupportedFixAllScopes().ToList();
 
         await Assert.That(scopes).Contains(FixAllScope.Document);
         await Assert.That(scopes).Contains(FixAllScope.Project);
@@ -135,7 +136,8 @@ public sealed class OneTypePerFileFixAllTests
     {
         var provider = new OneTypePerFileCodeFixProvider().GetFixAllProvider();
 
-        await Assert.That(provider).IsSameReferenceAs(OneTypePerFileFixAllProvider.Instance);
+        await Assert.That(provider).IsSameReferenceAs(new OneTypePerFileCodeFixProvider().GetFixAllProvider());
+        await Assert.That(provider!.GetType()).IsEqualTo(typeof(SequentialFixAllProvider));
     }
 
     [Test]
@@ -145,7 +147,7 @@ public sealed class OneTypePerFileFixAllTests
 
         try
         {
-            _ = await OneTypePerFileFixAllProvider.Instance.GetFixAsync(null!).ConfigureAwait(false);
+            _ = await new OneTypePerFileCodeFixProvider().GetFixAllProvider()!.GetFixAsync(null!).ConfigureAwait(false);
         }
         catch (ArgumentNullException exception)
         {
