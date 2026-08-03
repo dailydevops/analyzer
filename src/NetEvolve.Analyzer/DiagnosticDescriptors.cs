@@ -35,4 +35,18 @@ internal static class DiagnosticDescriptors
             + "physical and logical layout stay aligned.",
         helpLinkUri: DiagnosticIds.HelpLink(DiagnosticIds.NE0002)
     );
+
+    /// <summary>NE0003 — a file should declare exactly one namespace.</summary>
+    public static readonly DiagnosticDescriptor SingleNamespacePerFile = new(
+        id: DiagnosticIds.NE0003,
+        title: "Declare a single namespace per file",
+        messageFormat: "Declare exactly one namespace per file",
+        category: DiagnosticCategories.Maintainability,
+        defaultSeverity: DiagnosticSeverity.Warning,
+        isEnabledByDefault: true,
+        description: "A file that declares more than one namespace (sibling or nested) hides types from the "
+            + "name-to-location mapping the other organization rules establish. Declare exactly one namespace "
+            + "per file.",
+        helpLinkUri: DiagnosticIds.HelpLink(DiagnosticIds.NE0003)
+    );
 }
