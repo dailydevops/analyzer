@@ -19,25 +19,15 @@ using Microsoft.CodeAnalysis.Diagnostics;
 [DiagnosticAnalyzer(LanguageNames.CSharp)]
 public sealed class OneTypePerFileAnalyzer : DiagnosticAnalyzer
 {
-    private const string GroupGenericOverloadsProperty = "build_property.NetEvolveAnalyzerGroupGenericOverloads";
-    private const string DisableProperty = "build_property.NetEvolveAnalyzerDisableFileOrganizationRules";
-    private const string PublishSingleFileProperty = "build_property.PublishSingleFile";
+    /// <summary>Diagnostic property key carrying the expected file name (without extension) for the type.</summary>
+    internal const string ExpectedFileNameProperty = "ExpectedFileName";
 
-    /// <summary>The descriptor for NE0001.</summary>
-    internal static readonly DiagnosticDescriptor Rule = new(
-        id: DiagnosticIds.NE0001,
-        title: "Declare one type per file with a matching file name",
-        messageFormat: "Type '{0}' should be declared in its own file named '{1}.cs'",
-        category: DiagnosticCategories.Maintainability,
-        defaultSeverity: DiagnosticSeverity.Warning,
-        isEnabledByDefault: true,
-        description: "Each top-level type should live in its own file whose name matches the type. Generic "
-            + "overloads are encoded by arity unless overload grouping is enabled.",
-        helpLinkUri: DiagnosticIds.HelpLink(DiagnosticIds.NE0001)
-    );
+    /// <summary>Diagnostic property key: <c>"true"</c> when the file declares a single top-level type.</summary>
+    internal const string SingleTypeProperty = "SingleType";
 
     /// <inheritdoc />
-    public override ImmutableArray<DiagnosticDescriptor> SupportedDiagnostics { get; } = ImmutableArray.Create(Rule);
+    public override ImmutableArray<DiagnosticDescriptor> SupportedDiagnostics { get; } =
+        ImmutableArray.Create(DiagnosticDescriptors.OneTypePerFile);
 
     /// <inheritdoc />
     public override void Initialize(AnalysisContext context)
@@ -61,12 +51,15 @@ public sealed class OneTypePerFileAnalyzer : DiagnosticAnalyzer
         }
 
         var globalOptions = context.Options.AnalyzerConfigOptionsProvider.GlobalOptions;
-        if (GetBoolean(globalOptions, DisableProperty) || GetBoolean(globalOptions, PublishSingleFileProperty))
+        if (
+            GetBoolean(globalOptions, BuildProperty.DisableFileOrganizationRules)
+            || GetBoolean(globalOptions, BuildProperty.PublishSingleFile)
+        )
         {
             return;
         }
 
-        var groupGenericOverloads = GetBoolean(globalOptions, GroupGenericOverloadsProperty);
+        var groupGenericOverloads = GetBoolean(globalOptions, BuildProperty.GroupGenericOverloads);
         var root = context.Tree.GetRoot(context.CancellationToken);
 
         var groups = GroupTopLevelTypes(root, groupGenericOverloads);
@@ -80,6 +73,7 @@ public sealed class OneTypePerFileAnalyzer : DiagnosticAnalyzer
             string.Equals(group.ExpectedFileName, fileName, StringComparison.Ordinal)
         );
 
+        var singleType = groups.Count == 1;
         foreach (var group in groups)
         {
             if (ReferenceEquals(group, primary))
@@ -87,10 +81,17 @@ public sealed class OneTypePerFileAnalyzer : DiagnosticAnalyzer
                 continue;
             }
 
+            // Surface the target file name (and whether the file holds a single type) so the code fix can
+            // choose between renaming the file and moving the type, without re-parsing the message.
+            var properties = ImmutableDictionary<string, string?>
+                .Empty.Add(ExpectedFileNameProperty, group.ExpectedFileName)
+                .Add(SingleTypeProperty, singleType ? "true" : "false");
+
             context.ReportDiagnostic(
                 Diagnostic.Create(
-                    Rule,
+                    DiagnosticDescriptors.OneTypePerFile,
                     group.First.Identifier.GetLocation(),
+                    properties,
                     group.First.Display,
                     group.ExpectedFileName
                 )
