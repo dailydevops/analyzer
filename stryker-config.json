@@ -1,0 +1,20 @@
+{
+  "stryker-config": {
+    "solution": "Analyzer.slnx",
+    "project": "NetEvolve.Analyzer.csproj",
+    "test-projects": [
+      "test/NetEvolve.Analyzer.Tests.Unit/NetEvolve.Analyzer.Tests.Unit.csproj",
+      "test/NetEvolve.Analyzer.Tests.Integration/NetEvolve.Analyzer.Tests.Integration.csproj"
+    ],
+    "mutation-level": "Complete",
+    "reporters": ["dashboard", "html", "progress", "cleartext"],
+    "thresholds": {
+      "high": 90,
+      "low": 80,
+      "break": 0
+    },
+    "dashboard": {
+      "module": "NetEvolve.Analyzer"
+    }
+  }
+}

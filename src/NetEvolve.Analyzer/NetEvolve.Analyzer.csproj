@@ -1,0 +1,52 @@
+<Project Sdk="Microsoft.NET.Sdk">
+  <PropertyGroup>
+    <!-- Analyzers must target netstandard2.0 so they load in every Roslyn host (VS, MSBuild, dotnet). -->
+    <TargetFramework>netstandard2.0</TargetFramework>
+    <IsRoslynComponent>true</IsRoslynComponent>
+    <EnforceExtendedAnalyzerRules>true</EnforceExtendedAnalyzerRules>
+  </PropertyGroup>
+
+  <PropertyGroup Label="Package settings">
+    <Description>NetEvolve Roslyn analyzers and code fixes, organized by the standard Microsoft diagnostic categories.</Description>
+    <PackageTags>roslyn;analyzers;analyzer;codefix;code-fix;diagnostics;netevolve</PackageTags>
+    <DevelopmentDependency>true</DevelopmentDependency>
+    <!-- Pure analyzer package: no lib/, no dependencies; the assembly is placed under analyzers/dotnet/cs
+         by the _PackAnalyzer target below (exactly there, with no target-framework subfolder). -->
+    <IncludeBuildOutput>false</IncludeBuildOutput>
+    <SuppressDependenciesWhenPacking>true</SuppressDependenciesWhenPacking>
+    <TargetsForTfmSpecificContentInPackage>$(TargetsForTfmSpecificContentInPackage);_PackAnalyzer</TargetsForTfmSpecificContentInPackage>
+    <!-- Embed the PDB into the assembly and ship no separate symbol package: with IncludeBuildOutput=false
+         a .snupkg would be empty (NU5017), and embedded symbols keep the analyzer debuggable. -->
+    <DebugType>embedded</DebugType>
+    <IncludeSymbols>false</IncludeSymbols>
+    <!-- RS1038: analyzers and code fixes share this single assembly by design; CodeFixProvider itself
+         lives in Microsoft.CodeAnalysis.Workspaces, so the reference is unavoidable here. The analyzer
+         type never touches Workspaces APIs, so it still loads correctly in command-line builds. -->
+    <NoWarn>$(NoWarn);NU5128;RS1038</NoWarn>
+  </PropertyGroup>
+
+  <ItemGroup Label="Test access to internals">
+    <InternalsVisibleTo Include="NetEvolve.Analyzer.Tests.Unit" />
+    <InternalsVisibleTo Include="NetEvolve.Analyzer.Tests.Integration" />
+  </ItemGroup>
+
+  <ItemGroup Label="Roslyn">
+    <PackageReference Include="Microsoft.CodeAnalysis.CSharp.Workspaces" PrivateAssets="all" />
+    <PackageReference Include="Microsoft.CodeAnalysis.Analyzers" PrivateAssets="all">
+      <IncludeAssets>runtime; build; native; contentfiles; analyzers; buildtransitive</IncludeAssets>
+    </PackageReference>
+  </ItemGroup>
+
+  <ItemGroup Label="Analyzer release tracking (RS2008)">
+    <AdditionalFiles Include="AnalyzerReleases.Shipped.md" />
+    <AdditionalFiles Include="AnalyzerReleases.Unshipped.md" />
+  </ItemGroup>
+
+  <!-- Place the built assembly at exactly analyzers/dotnet/cs (no TFM subfolder), so Roslyn discovers it.
+       Runs during pack, after the assembly has been produced. -->
+  <Target Name="_PackAnalyzer">
+    <ItemGroup>
+      <TfmSpecificPackageFile Include="$(TargetPath)" PackagePath="analyzers/dotnet/cs/%(Filename)%(Extension)" />
+    </ItemGroup>
+  </Target>
+</Project>

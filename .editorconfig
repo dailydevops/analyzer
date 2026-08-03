@@ -42,20 +42,24 @@ indent_size = 4
 generated_code = true
 
 # XML project files
-[*.{csproj,vbproj,vcxproj,vcxproj.filters,proj,projitems,shproj,nativeproj,locproj}]
+[*.{slnx,csproj,vbproj,vcxproj,vcxproj.filters,proj,projitems,shproj,nativeproj,locproj}]
 indent_size = 2
+max_line_length = 200
 
 # Xml build files
 [*.builds]
 indent_size = 2
+max_line_length = 200
 
 # Xml files
 [*.{xml,stylecop,resx,ruleset}]
 indent_size = 2
+max_line_length = 200
 
 # XML config files
 [*.{props,targets,ruleset,config,nuspec,vsixmanifest,vsct}]
 indent_size = 2
+max_line_length = 200
 
 # JSON files
 [*.json]
@@ -85,10 +89,6 @@ insert_final_newline = false
 # Visual Studio Solution Files
 [*.sln]
 indent_style = tab
-
-[*.{received,verified}.txt]
-insert_final_newline = false
-trim_trailing_whitespace = false
 
 [*.{cs,csx,vb,vbx}]
 # .NET Code Style Settings
@@ -133,6 +133,13 @@ dotnet_naming_symbols.all_const.required_modifiers                      = const
 dotnet_naming_rule.all_const.severity                                   = error
 dotnet_naming_rule.all_const.style                                      = all_elements
 dotnet_naming_rule.all_const.symbols                                    = all_const
+
+dotnet_naming_style.all_static_readonly.capitalization                  = pascal_case
+dotnet_naming_symbols.all_static_readonly.applicable_kinds              = field
+dotnet_naming_symbols.all_static_readonly.required_modifiers            = static, readonly
+dotnet_naming_rule.all_static_readonly.severity                         = error
+dotnet_naming_rule.all_static_readonly.style                            = all_static_readonly
+dotnet_naming_rule.all_static_readonly.symbols                          = all_static_readonly
 
 dotnet_naming_style.all_fields.required_prefix                          = _
 dotnet_naming_style.all_fields.capitalization                           = camel_case
@@ -263,22 +270,26 @@ dotnet_diagnostic.IDE0046.severity                                      = sugges
 csharp_style_prefer_primary_constructors                                = false
 dotnet_diagnostic.IDE0290.severity                                      = suggestion
 
+# IDE0060: Remove unused parameter
+dotnet_diagnostic.IDE0060.severity                                      = warning
+dotnet_diagnostic.RCS1163.severity                                      = none
+dotnet_code_quality_unused_parameters                                   = all
+
 # [CSharpier] Incompatible rules deactivated
 # https://csharpier.com/docs/IntegratingWithLinters#code-analysis-rules
 dotnet_diagnostic.IDE0055.severity                                      = none
-dotnet_diagnostic.SA1000.severity                                       = none
-dotnet_diagnostic.SA1009.severity                                       = none
-dotnet_diagnostic.SA1111.severity                                       = none
-dotnet_diagnostic.SA1118.severity                                       = none
-dotnet_diagnostic.SA1137.severity                                       = none
-dotnet_diagnostic.SA1413.severity                                       = none
-dotnet_diagnostic.SA1500.severity                                       = none
-dotnet_diagnostic.SA1501.severity                                       = none
-dotnet_diagnostic.SA1502.severity                                       = none
-dotnet_diagnostic.SA1504.severity                                       = none
-dotnet_diagnostic.SA1515.severity                                       = none
-dotnet_diagnostic.SA1516.severity                                       = none
 
 # Support for NetEvolve.Arguments Methods
 # https://learn.microsoft.com/en-us/dotnet/fundamentals/code-analysis/quality-rules/ca1062#null-check-validation-methods
 dotnet_code_quality.CA1062.null_check_validation_methods                = M:NetEvolve.Arguments.Argument.ThrowIfNull(System.Object,System.String)|M:NetEvolve.Arguments.Argument.ThrowIfNull(System.Void*,System.String)|M:NetEvolve.Arguments.Argument.ThrowIfNullOrEmpty(System.String,System.String)|M:NetEvolve.Arguments.Argument.ThrowIfNullOrEmpty``1(System.Collections.Generic.IEnumerable{``0},System.String)|M:NetEvolve.Arguments.Argument.ThrowIfNullOrWhiteSpace(System.String,System.String)
+
+# Disable all style rules for generated code
+[*.{received,verified}.*]
+generated_code = true
+# Disable all style rules for migrations
+dotnet_analyzer_diagnostic.severity = none
+
+[**/Migrations/*.{cs,csx,vb,vbx}]
+generated_code = true
+# Disable all style rules for migrations
+dotnet_analyzer_diagnostic.severity = none

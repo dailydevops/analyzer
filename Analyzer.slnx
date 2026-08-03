@@ -19,6 +19,14 @@
     <File Path="logo.png" />
     <File Path="nuget.config" />
     <File Path="renovate.json" />
+    <File Path="stryker-config.json" />
     <File Path="testEnvironments.json" />
+  </Folder>
+  <Folder Name="/src/">
+    <Project Path="src/NetEvolve.Analyzer/NetEvolve.Analyzer.csproj" />
+  </Folder>
+  <Folder Name="/test/">
+    <Project Path="test/NetEvolve.Analyzer.Tests.Unit/NetEvolve.Analyzer.Tests.Unit.csproj" />
+    <Project Path="test/NetEvolve.Analyzer.Tests.Integration/NetEvolve.Analyzer.Tests.Integration.csproj" />
   </Folder>
 </Solution>
