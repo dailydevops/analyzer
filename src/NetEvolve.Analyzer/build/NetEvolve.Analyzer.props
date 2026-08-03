@@ -1,0 +1,11 @@
+<Project>
+  <!--
+    Exposes the MSBuild properties that the file/namespace organization rules (NE0001+) read through
+    Roslyn's AnalyzerConfigOptions. Without CompilerVisibleProperty these values never reach the analyzer.
+  -->
+  <ItemGroup>
+    <CompilerVisibleProperty Include="PublishSingleFile" />
+    <CompilerVisibleProperty Include="NetEvolveAnalyzerDisableFileOrganizationRules" />
+    <CompilerVisibleProperty Include="NetEvolveAnalyzerGroupGenericOverloads" />
+  </ItemGroup>
+</Project>

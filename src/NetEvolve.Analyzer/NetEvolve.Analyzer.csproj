@@ -42,6 +42,11 @@
     <AdditionalFiles Include="AnalyzerReleases.Unshipped.md" />
   </ItemGroup>
 
+  <ItemGroup Label="Consumer MSBuild props (exposes CompilerVisibleProperty for the rules)">
+    <!-- Must be named <PackageId>.props and ship under build/ so it auto-imports into consuming projects. -->
+    <None Include="build\NetEvolve.Analyzer.props" Pack="true" PackagePath="build\NetEvolve.Analyzer.props" />
+  </ItemGroup>
+
   <!-- Place the built assembly at exactly analyzers/dotnet/cs (no TFM subfolder), so Roslyn discovers it.
        Runs during pack, after the assembly has been produced. -->
   <Target Name="_PackAnalyzer">
