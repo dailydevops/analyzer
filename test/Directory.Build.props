@@ -1,0 +1,16 @@
+<Project>
+  <!-- Chain to the repository-root Directory.Build.props (a nested file otherwise stops the search). -->
+  <Import Project="$([MSBuild]::GetPathOfFileAbove('Directory.Build.props', '$(MSBuildThisFileDirectory)../'))" />
+
+  <PropertyGroup>
+    <!--
+      Test-only rule adjustments live here: nested .editorconfig files are git-ignored (.gitignore) and the
+      root .editorconfig is template-managed ("DO NOT CHANGE SETTINGS IN THIS FILE"), so a project-scoped
+      NoWarn is the committed, policy-safe place for them.
+
+      IDE0058 (unused expression value): TUnit fluent assertions are awaited as expression statements, e.g.
+      `await Assert.That(x).IsEqualTo(y);` — the awaited builder returns a value by design.
+    -->
+    <NoWarn>$(NoWarn);IDE0058</NoWarn>
+  </PropertyGroup>
+</Project>
