@@ -9,8 +9,10 @@ using Microsoft.CodeAnalysis.Diagnostics;
 
 /// <summary>
 /// Computes the namespace a file should declare from its location relative to the project directory, anchored
-/// at the <c>RootNamespace</c> MSBuild property. Shared by <c>NamespaceMatchesFolderAnalyzer</c> (NE0002) and
-/// the NE0003 nested-namespace flatten fix, so both derive the same folder-anchored value.
+/// at the <c>RootNamespace</c> MSBuild property. When <c>RootNamespace</c> is absent or empty the namespace is
+/// composed purely from the folder segments below the project directory. Shared by
+/// <c>NamespaceMatchesFolderAnalyzer</c> (NE0002) and the NE0003 nested-namespace flatten fix, so both derive
+/// the same folder-anchored value.
 /// </summary>
 internal static class FolderNamespace
 {
@@ -18,9 +20,10 @@ internal static class FolderNamespace
 
     /// <summary>
     /// Resolves the folder-derived namespace for <paramref name="filePath"/>. Returns <see langword="false"/>
-    /// when the anchor properties (<c>RootNamespace</c>, <c>ProjectDir</c>) are missing, the file lives outside
-    /// the project directory, or a folder segment is not a valid C# identifier — in all of which cases no
-    /// reliable mapping exists and the caller should stay silent.
+    /// when <c>ProjectDir</c> is missing, the file lives outside the project directory, a folder segment is not
+    /// a valid C# identifier, or the file sits in the project root with no <c>RootNamespace</c> anchor — in all
+    /// of which cases no reliable mapping exists and the caller should stay silent. <c>RootNamespace</c> is
+    /// optional: when it is absent or empty the returned namespace is the folder segments joined on their own.
     /// </summary>
     /// <param name="globalOptions">The global analyzer-config options exposing the build properties.</param>
     /// <param name="filePath">The absolute (or project-relative) path of the source file.</param>
@@ -34,20 +37,22 @@ internal static class FolderNamespace
             return false;
         }
 
-        if (
-            !TryGetNonEmpty(globalOptions, BuildProperty.RootNamespace, out var rootNamespace)
-            || !TryGetNonEmpty(globalOptions, BuildProperty.ProjectDir, out var projectDir)
-        )
+        if (!TryGetNonEmpty(globalOptions, BuildProperty.ProjectDir, out var projectDir))
         {
             return false;
         }
 
+        // RootNamespace is optional: an absent or empty value means the namespace is composed purely from the
+        // folder segments below the project directory.
+        _ = globalOptions.TryGetValue(BuildProperty.RootNamespace, out var rawRootNamespace);
+        var rootNamespace = rawRootNamespace ?? string.Empty;
+
         var directory = Path.GetDirectoryName(filePath);
         if (string.IsNullOrEmpty(directory))
         {
-            // The file has no directory component, so it maps to the root namespace exactly.
-            expected = rootNamespace;
-            return true;
+            // The file has no directory component, so it maps to the root namespace exactly — but with no
+            // RootNamespace anchor there is nothing to compose from, so stay silent.
+            return TryUseRootNamespace(rootNamespace, ref expected);
         }
 
         if (!TryGetRelativeSegments(projectDir, directory!, out var segments))
@@ -57,9 +62,9 @@ internal static class FolderNamespace
 
         if (segments.Count == 0)
         {
-            // The file sits directly in the project directory: it maps to the root namespace exactly.
-            expected = rootNamespace;
-            return true;
+            // The file sits directly in the project directory: it maps to the root namespace exactly, or stays
+            // silent when there is no RootNamespace anchor to compose from.
+            return TryUseRootNamespace(rootNamespace, ref expected);
         }
 
         if (segments.Any(segment => !SyntaxFacts.IsValidIdentifier(segment)))
@@ -67,7 +72,19 @@ internal static class FolderNamespace
             return false;
         }
 
-        expected = rootNamespace + "." + string.Join(".", segments);
+        var folderNamespace = string.Join(".", segments);
+        expected = rootNamespace.Length == 0 ? folderNamespace : rootNamespace + "." + folderNamespace;
+        return true;
+    }
+
+    private static bool TryUseRootNamespace(string rootNamespace, ref string expected)
+    {
+        if (rootNamespace.Length == 0)
+        {
+            return false;
+        }
+
+        expected = rootNamespace;
         return true;
     }
 

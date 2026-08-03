@@ -77,6 +77,45 @@ public sealed class FolderNamespaceTests
     }
 
     [Test]
+    public async Task TryResolve_EmptyRootNamespace_SubFolders_JoinsSegmentsAlone()
+    {
+        var resolved = FolderNamespace.TryResolve(
+            Options(("RootNamespace", ""), ("ProjectDir", "/proj")),
+            "/proj/Shapes/Primitives/Circle.cs",
+            out var expected
+        );
+
+        await Assert.That(resolved).IsTrue();
+        await Assert.That(expected).IsEqualTo("Shapes.Primitives");
+    }
+
+    [Test]
+    public async Task TryResolve_MissingRootNamespace_SubFolders_JoinsSegmentsAlone()
+    {
+        var resolved = FolderNamespace.TryResolve(
+            Options(("ProjectDir", "/proj")),
+            "/proj/Shapes/Circle.cs",
+            out var expected
+        );
+
+        await Assert.That(resolved).IsTrue();
+        await Assert.That(expected).IsEqualTo("Shapes");
+    }
+
+    [Test]
+    public async Task TryResolve_EmptyRootNamespace_ProjectRoot_ReturnsFalse()
+    {
+        // No folders to compose from and no RootNamespace anchor: nothing reliable to map to, so stay silent.
+        var resolved = FolderNamespace.TryResolve(
+            Options(("RootNamespace", ""), ("ProjectDir", "/proj")),
+            "/proj/Circle.cs",
+            out _
+        );
+
+        await Assert.That(resolved).IsFalse();
+    }
+
+    [Test]
     public async Task TryResolve_OutsideProjectDir_ReturnsFalse()
     {
         var resolved = FolderNamespace.TryResolve(
