@@ -35,39 +35,26 @@ public sealed class OneTypePerFileCodeFixProvider : CodeFixProvider
     /// <inheritdoc />
     public override async Task RegisterCodeFixesAsync(CodeFixContext context)
     {
-        var root = await context.Document.GetSyntaxRootAsync(context.CancellationToken).ConfigureAwait(false);
-        if (root is null)
-        {
-            return;
-        }
-
+        // The fix only handles NE0001 diagnostics from OneTypePerFileAnalyzer, which always report at a
+        // top-level type identifier and always carry the ExpectedFileName/SingleType properties.
+        var root = (await context.Document.GetSyntaxRootAsync(context.CancellationToken).ConfigureAwait(false))!;
         var diagnostic = context.Diagnostics[0];
-        if (
-            root.FindNode(diagnostic.Location.SourceSpan).AncestorsAndSelf().FirstOrDefault(IsTopLevelTypeDeclaration)
-            is not MemberDeclarationSyntax declaration
-        )
-        {
-            return;
-        }
+        var declaration = (MemberDeclarationSyntax)
+            root.FindNode(diagnostic.Location.SourceSpan).AncestorsAndSelf().First(IsTopLevelTypeDeclaration);
 
-        if (
-            !diagnostic.Properties.TryGetValue(OneTypePerFileAnalyzer.ExpectedFileNameProperty, out var expectedName)
-            || string.IsNullOrEmpty(expectedName)
-        )
-        {
-            return;
-        }
-
-        var singleType =
-            diagnostic.Properties.TryGetValue(OneTypePerFileAnalyzer.SingleTypeProperty, out var single)
-            && string.Equals(single, "true", StringComparison.Ordinal);
+        var expectedName = diagnostic.Properties[OneTypePerFileAnalyzer.ExpectedFileNameProperty]!;
+        var singleType = string.Equals(
+            diagnostic.Properties[OneTypePerFileAnalyzer.SingleTypeProperty],
+            "true",
+            StringComparison.Ordinal
+        );
 
         if (singleType)
         {
             context.RegisterCodeFix(
                 CodeAction.Create(
                     $"Rename file to '{expectedName}.cs'",
-                    cancellationToken => RenameFileAsync(context.Document, expectedName!, cancellationToken),
+                    cancellationToken => RenameFileAsync(context.Document, expectedName, cancellationToken),
                     equivalenceKey: "NE0001.RenameFile"
                 ),
                 diagnostic
@@ -87,7 +74,7 @@ public sealed class OneTypePerFileCodeFixProvider : CodeFixProvider
             context.RegisterCodeFix(
                 CodeAction.Create(
                     $"Move type to '{expectedName}.cs'",
-                    cancellationToken => MoveTypeAsync(context.Document, declaration, expectedName!, cancellationToken),
+                    cancellationToken => MoveTypeAsync(context.Document, declaration, expectedName, cancellationToken),
                     equivalenceKey: "NE0001.MoveType"
                 ),
                 diagnostic
@@ -104,13 +91,9 @@ public sealed class OneTypePerFileCodeFixProvider : CodeFixProvider
         cancellationToken.ThrowIfCancellationRequested();
 
         var newName = expectedName + ".cs";
-        var solution = document.Project.Solution.WithDocumentName(document.Id, newName);
-
-        var newFilePath = SiblingPath(document.FilePath, newName);
-        if (newFilePath is not null)
-        {
-            solution = solution.WithDocumentFilePath(document.Id, newFilePath);
-        }
+        var solution = document
+            .Project.Solution.WithDocumentName(document.Id, newName)
+            .WithDocumentFilePath(document.Id, SiblingPath(document.FilePath!, newName));
 
         return Task.FromResult(solution);
     }
@@ -147,7 +130,7 @@ public sealed class OneTypePerFileCodeFixProvider : CodeFixProvider
                 newName,
                 SourceText.From(newText),
                 document.Folders,
-                SiblingPath(document.FilePath, newName)
+                SiblingPath(document.FilePath!, newName)
             );
     }
 
@@ -200,11 +183,6 @@ public sealed class OneTypePerFileCodeFixProvider : CodeFixProvider
             lines.RemoveAt(lines.Count - 1);
         }
 
-        if (lines.Count == 0)
-        {
-            return string.Empty;
-        }
-
         var indent = lines[0].Length - lines[0].TrimStart().Length;
         return string.Join(
             "\n",
@@ -239,13 +217,8 @@ public sealed class OneTypePerFileCodeFixProvider : CodeFixProvider
             && string.Equals(value, "true", StringComparison.OrdinalIgnoreCase);
     }
 
-    private static string? SiblingPath(string? currentPath, string newName)
+    private static string SiblingPath(string currentPath, string newName)
     {
-        if (string.IsNullOrEmpty(currentPath))
-        {
-            return null;
-        }
-
         var directory = Path.GetDirectoryName(currentPath);
         return string.IsNullOrEmpty(directory) ? newName : Path.Combine(directory, newName);
     }
@@ -255,12 +228,7 @@ public sealed class OneTypePerFileCodeFixProvider : CodeFixProvider
         && node.Parent is BaseNamespaceDeclarationSyntax or CompilationUnitSyntax;
 
     private static SyntaxToken Identifier(MemberDeclarationSyntax member) =>
-        member switch
-        {
-            BaseTypeDeclarationSyntax type => type.Identifier,
-            DelegateDeclarationSyntax @delegate => @delegate.Identifier,
-            _ => default,
-        };
+        member is BaseTypeDeclarationSyntax type ? type.Identifier : ((DelegateDeclarationSyntax)member).Identifier;
 
     private static int Arity(MemberDeclarationSyntax member) =>
         member switch

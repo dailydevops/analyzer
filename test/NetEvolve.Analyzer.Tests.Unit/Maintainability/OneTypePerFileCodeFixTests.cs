@@ -348,6 +348,76 @@ public sealed class OneTypePerFileCodeFixTests
         );
 
     [Test]
+    public Task Move_GenericType_Strict_ToArityEncodedFile() =>
+        OneTypePerFileCodeFixVerifier.VerifyAsync(
+            [
+                (
+                    "Anchor.cs",
+                    """
+                    namespace Geometry;
+
+                    public sealed class Anchor { }
+
+                    public readonly struct {|NE0001:Result|}<T> { }
+                    """
+                ),
+            ],
+            [
+                (
+                    "Anchor.cs",
+                    """
+                    namespace Geometry;
+
+                    public sealed class Anchor { }
+                    """
+                ),
+                (
+                    "Result{T}.cs",
+                    """
+                    namespace Geometry;
+
+                    public readonly struct Result<T> { }
+                    """
+                ),
+            ]
+        );
+
+    [Test]
+    public Task Move_GenericDelegate_Strict_ToArityEncodedFile() =>
+        OneTypePerFileCodeFixVerifier.VerifyAsync(
+            [
+                (
+                    "Anchor.cs",
+                    """
+                    namespace Geometry;
+
+                    public sealed class Anchor { }
+
+                    public delegate T {|NE0001:Factory|}<T>();
+                    """
+                ),
+            ],
+            [
+                (
+                    "Anchor.cs",
+                    """
+                    namespace Geometry;
+
+                    public sealed class Anchor { }
+                    """
+                ),
+                (
+                    "Factory{T}.cs",
+                    """
+                    namespace Geometry;
+
+                    public delegate T Factory<T>();
+                    """
+                ),
+            ]
+        );
+
+    [Test]
     public Task Move_Delegate_KindHandled() =>
         OneTypePerFileCodeFixVerifier.VerifyAsync(
             [
