@@ -1,4 +1,4 @@
-namespace NetEvolve.Analyzer.Maintainability;
+﻿namespace NetEvolve.Analyzer.Helpers;
 
 using System;
 using System.Collections.Generic;

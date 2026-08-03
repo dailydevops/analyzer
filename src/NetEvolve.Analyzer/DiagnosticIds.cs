@@ -34,6 +34,23 @@ internal static class DiagnosticIds
     /// </summary>
     public const string NE0003 = Prefix + "0003";
 
+    // Usage
+
+    /// <summary>
+    /// NE0004 — prefer the <c>is null</c> pattern over <c>== null</c> / <c>null ==</c>.
+    /// </summary>
+    public const string NE0004 = Prefix + "0004";
+
+    /// <summary>
+    /// NE0005 — prefer the <c>is not null</c> pattern over <c>!= null</c> / <c>null !=</c>.
+    /// </summary>
+    public const string NE0005 = Prefix + "0005";
+
+    /// <summary>
+    /// NE0006 — prefer the <c>is not null</c> pattern over an <c>is object</c> null check.
+    /// </summary>
+    public const string NE0006 = Prefix + "0006";
+
     /// <summary>Builds the documentation help link for a diagnostic identifier.</summary>
     /// <param name="diagnosticId">The diagnostic identifier, e.g. <c>NE0001</c>.</param>
     /// <returns>An absolute URI pointing at the rule's documentation.</returns>

@@ -1,11 +1,11 @@
-namespace NetEvolve.Analyzer.Tests.Unit.Maintainability;
+namespace NetEvolve.Analyzer.Tests.Unit.Helpers;
 
 using System;
 using System.Collections.Immutable;
 using System.Diagnostics.CodeAnalysis;
 using System.Threading.Tasks;
 using Microsoft.CodeAnalysis.Diagnostics;
-using NetEvolve.Analyzer.Maintainability;
+using NetEvolve.Analyzer.Helpers;
 using TUnit.Assertions;
 using TUnit.Assertions.Extensions;
 using TUnit.Core;

@@ -1,10 +1,11 @@
-namespace NetEvolve.Analyzer.Maintainability;
+﻿namespace NetEvolve.Analyzer.Maintainability;
 
 using System;
 using System.Collections.Immutable;
 using Microsoft.CodeAnalysis;
 using Microsoft.CodeAnalysis.CSharp.Syntax;
 using Microsoft.CodeAnalysis.Diagnostics;
+using NetEvolve.Analyzer.Helpers;
 
 /// <summary>
 /// NE0002 — reports when a file's top-level namespace declaration does not match the folder-derived namespace,

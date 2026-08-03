@@ -49,4 +49,45 @@ internal static class DiagnosticDescriptors
             + "per file.",
         helpLinkUri: DiagnosticIds.HelpLink(DiagnosticIds.NE0003)
     );
+
+    /// <summary>NE0004 — prefer the <c>is null</c> pattern over <c>== null</c>.</summary>
+    public static readonly DiagnosticDescriptor UseIsNull = new(
+        id: DiagnosticIds.NE0004,
+        title: "Use the 'is null' pattern instead of '== null'",
+        messageFormat: "Use the 'is null' pattern instead of comparing with '== null'",
+        category: DiagnosticCategories.Usage,
+        defaultSeverity: DiagnosticSeverity.Warning,
+        isEnabledByDefault: true,
+        description: "A null comparison with the equality operator can be redefined by a user-defined "
+            + "'operator =='; the 'is null' pattern always performs a null check and cannot be overridden, so it "
+            + "expresses the intent unambiguously.",
+        helpLinkUri: DiagnosticIds.HelpLink(DiagnosticIds.NE0004)
+    );
+
+    /// <summary>NE0005 — prefer the <c>is not null</c> pattern over <c>!= null</c>.</summary>
+    public static readonly DiagnosticDescriptor UseIsNotNull = new(
+        id: DiagnosticIds.NE0005,
+        title: "Use the 'is not null' pattern instead of '!= null'",
+        messageFormat: "Use the 'is not null' pattern instead of comparing with '!= null'",
+        category: DiagnosticCategories.Usage,
+        defaultSeverity: DiagnosticSeverity.Warning,
+        isEnabledByDefault: true,
+        description: "A null comparison with the inequality operator can be redefined by a user-defined "
+            + "'operator !='; the 'is not null' pattern always performs a null check and cannot be overridden, so "
+            + "it expresses the intent unambiguously.",
+        helpLinkUri: DiagnosticIds.HelpLink(DiagnosticIds.NE0005)
+    );
+
+    /// <summary>NE0006 — prefer the <c>is not null</c> pattern over an <c>is object</c> null check.</summary>
+    public static readonly DiagnosticDescriptor UseIsNotNullOverIsObject = new(
+        id: DiagnosticIds.NE0006,
+        title: "Use the 'is not null' pattern instead of 'is object'",
+        messageFormat: "Use the 'is not null' pattern instead of 'is object' for a null check",
+        category: DiagnosticCategories.Usage,
+        defaultSeverity: DiagnosticSeverity.Warning,
+        isEnabledByDefault: true,
+        description: "Using 'is object' as a non-null check is easily misread as a type check; the 'is not null' "
+            + "pattern states the null check directly.",
+        helpLinkUri: DiagnosticIds.HelpLink(DiagnosticIds.NE0006)
+    );
 }

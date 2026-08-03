@@ -14,6 +14,7 @@ using Microsoft.CodeAnalysis.CodeFixes;
 using Microsoft.CodeAnalysis.CSharp;
 using Microsoft.CodeAnalysis.Diagnostics;
 using Microsoft.CodeAnalysis.Text;
+using NetEvolve.Analyzer.Helpers;
 using NetEvolve.Analyzer.Maintainability;
 
 /// <summary>
