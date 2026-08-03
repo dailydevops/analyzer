@@ -15,9 +15,10 @@ using Microsoft.CodeAnalysis.CSharp;
 using Microsoft.CodeAnalysis.Diagnostics;
 using Microsoft.CodeAnalysis.Text;
 using NetEvolve.Analyzer.Maintainability;
+using NetEvolve.Analyzer.Providers;
 
 /// <summary>
-/// Drives <see cref="OneTypePerFileFixAllProvider"/> end-to-end through a real <see cref="AdhocWorkspace"/>,
+/// Drives <see cref="SequentialFixAllProvider"/> end-to-end through a real <see cref="AdhocWorkspace"/>,
 /// mirroring <see cref="CodeFixRunner"/> but invoking the fix-all pipeline the IDE uses: it builds a project
 /// from named documents, constructs a <see cref="FixAllContext"/> for the requested <see cref="FixAllScope"/>
 /// backed by a diagnostic provider that runs <see cref="OneTypePerFileAnalyzer"/>, obtains the fix-all
@@ -101,7 +102,8 @@ internal static class FixAllRunner
         var project = solution.GetProject(projectId)!;
         var context = await CreateContextAsync(project, scope, cancellationToken).ConfigureAwait(false);
 
-        var action = await OneTypePerFileFixAllProvider.Instance.GetFixAsync(context).ConfigureAwait(false);
+        var fixAllProvider = new OneTypePerFileCodeFixProvider().GetFixAllProvider()!;
+        var action = await fixAllProvider.GetFixAsync(context).ConfigureAwait(false);
         if (action is null)
         {
             return solution;
@@ -129,7 +131,7 @@ internal static class FixAllRunner
                 project,
                 fixProvider,
                 scope,
-                nameof(OneTypePerFileFixAllProvider),
+                nameof(SequentialFixAllProvider),
                 diagnosticIds,
                 diagnosticProvider,
                 cancellationToken
@@ -141,7 +143,7 @@ internal static class FixAllRunner
             trigger,
             fixProvider,
             scope,
-            nameof(OneTypePerFileFixAllProvider),
+            nameof(SequentialFixAllProvider),
             diagnosticIds,
             diagnosticProvider,
             cancellationToken

@@ -5,7 +5,6 @@ using System.Collections.Generic;
 using System.Collections.Immutable;
 using System.IO;
 using System.Linq;
-using System.Text;
 using System.Threading;
 using System.Threading.Tasks;
 using Microsoft.CodeAnalysis;
@@ -16,9 +15,10 @@ using Microsoft.CodeAnalysis.Diagnostics;
 using Microsoft.CodeAnalysis.Text;
 using NetEvolve.Analyzer;
 using NetEvolve.Analyzer.Maintainability;
+using NetEvolve.Analyzer.Providers;
 
 /// <summary>
-/// Drives <see cref="OneTypePerFileFixAllProvider"/> end-to-end through a real <see cref="AdhocWorkspace"/> from
+/// Drives <see cref="SequentialFixAllProvider"/> end-to-end through a real <see cref="AdhocWorkspace"/> from
 /// the unit suite as well, so the fix-all pipeline is exercised by both the unit and integration flags (a line
 /// covered by only one flag counts as a partial against the patch coverage gate). It builds a project from named
 /// documents, constructs a <see cref="FixAllContext"/> for the requested <see cref="FixAllScope"/> backed by a
@@ -85,7 +85,8 @@ internal static class FixAllRunner
         var project = solution.GetProject(projectId)!;
         var context = await CreateContextAsync(project, scope, cancellationToken).ConfigureAwait(false);
 
-        var action = await OneTypePerFileFixAllProvider.Instance.GetFixAsync(context).ConfigureAwait(false);
+        var fixAllProvider = new OneTypePerFileCodeFixProvider().GetFixAllProvider()!;
+        var action = await fixAllProvider.GetFixAsync(context).ConfigureAwait(false);
         if (action is null)
         {
             return solution;
@@ -111,7 +112,7 @@ internal static class FixAllRunner
                 project,
                 fixProvider,
                 scope,
-                nameof(OneTypePerFileFixAllProvider),
+                nameof(SequentialFixAllProvider),
                 diagnosticIds,
                 diagnosticProvider,
                 cancellationToken
@@ -123,7 +124,7 @@ internal static class FixAllRunner
             trigger,
             fixProvider,
             scope,
-            nameof(OneTypePerFileFixAllProvider),
+            nameof(SequentialFixAllProvider),
             diagnosticIds,
             diagnosticProvider,
             cancellationToken
