@@ -29,8 +29,9 @@ public sealed class OneTypePerFileCodeFixProvider : CodeFixProvider
     public override ImmutableArray<string> FixableDiagnosticIds { get; } = ImmutableArray.Create(DiagnosticIds.NE0001);
 
     /// <inheritdoc />
-    // Renaming and adding documents does not compose safely across many diagnostics, so no batch fix-all.
-    public override FixAllProvider? GetFixAllProvider() => null;
+    // Renaming and adding documents cannot compose through the default batch fixer, so a custom provider
+    // applies the rename/move fixes sequentially and re-resolves diagnostics between each step.
+    public override FixAllProvider? GetFixAllProvider() => OneTypePerFileFixAllProvider.Instance;
 
     /// <inheritdoc />
     public override async Task RegisterCodeFixesAsync(CodeFixContext context)
