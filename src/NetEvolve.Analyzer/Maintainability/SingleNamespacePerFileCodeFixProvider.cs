@@ -13,6 +13,7 @@ using Microsoft.CodeAnalysis.CodeFixes;
 using Microsoft.CodeAnalysis.CSharp.Syntax;
 using Microsoft.CodeAnalysis.Text;
 using NetEvolve.Analyzer.Builders;
+using NetEvolve.Analyzer.Helpers;
 using NetEvolve.Analyzer.Providers;
 
 /// <summary>

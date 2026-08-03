@@ -5,6 +5,7 @@ using System.Collections.Immutable;
 using Microsoft.CodeAnalysis;
 using Microsoft.CodeAnalysis.Diagnostics;
 using Microsoft.CodeAnalysis.Operations;
+using NetEvolve.Analyzer.Helpers;
 
 /// <summary>
 /// NE0004 — reports a null comparison written with the equality operator (<c>x == null</c> or

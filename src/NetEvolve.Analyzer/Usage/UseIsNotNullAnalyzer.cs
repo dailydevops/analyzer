@@ -5,6 +5,7 @@ using System.Collections.Immutable;
 using Microsoft.CodeAnalysis;
 using Microsoft.CodeAnalysis.Diagnostics;
 using Microsoft.CodeAnalysis.Operations;
+using NetEvolve.Analyzer.Helpers;
 
 /// <summary>
 /// NE0005 — reports an inequality comparison against <c>null</c> (<c>x != null</c> or <c>null != x</c>) that

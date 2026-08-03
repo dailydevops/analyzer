@@ -5,6 +5,7 @@ using System.Collections.Immutable;
 using Microsoft.CodeAnalysis;
 using Microsoft.CodeAnalysis.Diagnostics;
 using Microsoft.CodeAnalysis.Operations;
+using NetEvolve.Analyzer.Helpers;
 
 /// <summary>
 /// NE0006 — reports an <c>x is object</c> type check that is really a null check and should be written with the

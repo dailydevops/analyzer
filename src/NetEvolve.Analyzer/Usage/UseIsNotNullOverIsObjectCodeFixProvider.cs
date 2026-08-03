@@ -10,6 +10,7 @@ using Microsoft.CodeAnalysis.CodeActions;
 using Microsoft.CodeAnalysis.CodeFixes;
 using Microsoft.CodeAnalysis.CSharp;
 using Microsoft.CodeAnalysis.CSharp.Syntax;
+using NetEvolve.Analyzer.Helpers;
 
 /// <summary>
 /// Code fix for <see cref="UseIsNotNullOverIsObjectAnalyzer">NE0006</see>. Rewrites an <c>x is object</c> type

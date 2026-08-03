@@ -10,6 +10,7 @@ using Microsoft.CodeAnalysis.CodeActions;
 using Microsoft.CodeAnalysis.CodeFixes;
 using Microsoft.CodeAnalysis.CSharp;
 using Microsoft.CodeAnalysis.CSharp.Syntax;
+using NetEvolve.Analyzer.Helpers;
 
 /// <summary>
 /// Code fix for <see cref="UseIsNotNullAnalyzer">NE0005</see>. Rewrites an inequality comparison against

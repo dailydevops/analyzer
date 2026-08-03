@@ -1,4 +1,4 @@
-namespace NetEvolve.Analyzer.Usage;
+﻿namespace NetEvolve.Analyzer.Helpers;
 
 using Microsoft.CodeAnalysis;
 using Microsoft.CodeAnalysis.Operations;
