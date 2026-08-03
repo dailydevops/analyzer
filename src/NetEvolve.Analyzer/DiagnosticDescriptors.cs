@@ -21,4 +21,18 @@ internal static class DiagnosticDescriptors
             + "overloads are encoded by arity unless overload grouping is enabled.",
         helpLinkUri: DiagnosticIds.HelpLink(DiagnosticIds.NE0001)
     );
+
+    /// <summary>NE0002 — the declared namespace should match the folder structure relative to <c>RootNamespace</c>.</summary>
+    public static readonly DiagnosticDescriptor NamespaceMatchesFolder = new(
+        id: DiagnosticIds.NE0002,
+        title: "Namespace should match the folder structure",
+        messageFormat: "Namespace '{0}' should be '{1}' to match the folder structure",
+        category: DiagnosticCategories.Maintainability,
+        defaultSeverity: DiagnosticSeverity.Warning,
+        isEnabledByDefault: true,
+        description: "Anchored at the RootNamespace MSBuild property, the declared namespace should equal "
+            + "RootNamespace joined with the file's folder path relative to the project directory, so the "
+            + "physical and logical layout stay aligned.",
+        helpLinkUri: DiagnosticIds.HelpLink(DiagnosticIds.NE0002)
+    );
 }
