@@ -74,6 +74,13 @@ internal static class DiagnosticIds
     /// </summary>
     public const string NE0009 = DiagnosticPrefix + "0009";
 
+    // Style
+
+    /// <summary>
+    /// NE0011 — avoid <c>#region</c>/<c>#endregion</c> directives.
+    /// </summary>
+    public const string NE0011 = DiagnosticPrefix + "0011";
+
     // Suppressors
 
     /// <summary>
