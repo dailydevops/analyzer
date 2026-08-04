@@ -51,6 +51,13 @@ internal static class DiagnosticIds
     /// </summary>
     public const string NE0006 = Prefix + "0006";
 
+    // Documentation
+
+    /// <summary>
+    /// NE0007 — prefer <c>&lt;see langword="..."/&gt;</c> over <c>&lt;c&gt;...&lt;/c&gt;</c> for C# keywords.
+    /// </summary>
+    public const string NE0007 = Prefix + "0007";
+
     /// <summary>Builds the documentation help link for a diagnostic identifier.</summary>
     /// <param name="diagnosticId">The diagnostic identifier, e.g. <c>NE0001</c>.</param>
     /// <returns>An absolute URI pointing at the rule's documentation.</returns>

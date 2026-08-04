@@ -11,3 +11,4 @@ NE0003 | Maintainability | Warning | SingleNamespacePerFileAnalyzer, [Documentat
 NE0004 | Usage | Warning | UseIsNullAnalyzer, [Documentation](https://github.com/dailydevops/analyzer/blob/main/docs/rules/NE0004.md)
 NE0005 | Usage | Warning | UseIsNotNullAnalyzer, [Documentation](https://github.com/dailydevops/analyzer/blob/main/docs/rules/NE0005.md)
 NE0006 | Usage | Warning | UseIsNotNullOverIsObjectAnalyzer, [Documentation](https://github.com/dailydevops/analyzer/blob/main/docs/rules/NE0006.md)
+NE0007 | Documentation | Warning | UseLangwordAnalyzer, [Documentation](https://github.com/dailydevops/analyzer/blob/main/docs/rules/NE0007.md)
