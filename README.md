@@ -122,7 +122,7 @@ test/                                           # Test projects
 └── NetEvolve.Analyzer.Tests.Integration/       # Integration tests against real compilations
 
 docs/
-└── rules/                                      # One Markdown file per diagnostic (NE0001.md, NE0002.md, ...)
+└── rules/                                      # One Markdown file per diagnostic (NE0001.md, NE0002.md, …)
 ```
 
 ## Architecture
