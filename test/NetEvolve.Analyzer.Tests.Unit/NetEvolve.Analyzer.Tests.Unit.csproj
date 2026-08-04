@@ -9,7 +9,7 @@
     <EnableTUnitPolyfills>false</EnableTUnitPolyfills>
   </PropertyGroup>
 
-  <PropertyGroup Label="Roslyn variant tested per target framework (4.7.0 is build-verified only, see stryker-config.*.json)">
+  <PropertyGroup Label="Roslyn variant tested per target framework">
     <!-- 4.4.0 (the baseline) is the default for every target framework except the two singled out below. -->
     <_RoslynVariant>4_4</_RoslynVariant>
     <_RoslynApiVersion>4.4.*</_RoslynApiVersion>
