@@ -19,11 +19,17 @@
     <File Path="logo.png" />
     <File Path="nuget.config" />
     <File Path="renovate.json" />
-    <File Path="stryker-config.json" />
+    <File Path="stryker-config.roslyn4_4.json" />
+    <File Path="stryker-config.roslyn4_14.json" />
+    <File Path="stryker-config.roslyn5_6.json" />
     <File Path="testEnvironments.json" />
   </Folder>
   <Folder Name="/src/">
     <Project Path="src/NetEvolve.Analyzer/NetEvolve.Analyzer.csproj" />
+    <Project Path="src/NetEvolve.Analyzer/NetEvolve.Analyzer.Roslyn4_4.csproj" />
+    <Project Path="src/NetEvolve.Analyzer/NetEvolve.Analyzer.Roslyn4_7.csproj" />
+    <Project Path="src/NetEvolve.Analyzer/NetEvolve.Analyzer.Roslyn4_14.csproj" />
+    <Project Path="src/NetEvolve.Analyzer/NetEvolve.Analyzer.Roslyn5_6.csproj" />
   </Folder>
   <Folder Name="/test/">
     <Project Path="test/NetEvolve.Analyzer.Tests.Unit/NetEvolve.Analyzer.Tests.Unit.csproj" />

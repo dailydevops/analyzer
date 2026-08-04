@@ -1,10 +1,7 @@
-namespace NetEvolve.Analyzer.Tests.Integration;
+﻿namespace NetEvolve.Analyzer.Tests.Integration;
 
-using System;
 using System.Collections.Immutable;
 using System.Diagnostics.CodeAnalysis;
-using System.IO;
-using System.Linq;
 using System.Threading;
 using System.Threading.Tasks;
 using Microsoft.CodeAnalysis;
@@ -18,7 +15,7 @@ using Microsoft.CodeAnalysis.Diagnostics;
 /// </summary>
 internal static class AnalyzerCompiler
 {
-    private static readonly ImmutableArray<MetadataReference> _references = ResolveFrameworkReferences();
+    private static readonly ImmutableArray<MetadataReference> _references = FrameworkReferences.All;
 
     /// <summary>Creates a compilation for <paramref name="source"/> against the running framework's assemblies.</summary>
     public static CSharpCompilation CreateCompilation(
@@ -59,27 +56,14 @@ internal static class AnalyzerCompiler
             new BuildPropertyOptionsProvider(properties)
         );
 
-        // S8949: the cancellation-token WithAnalyzers overload is obsolete; cancellation is honored by the
+        // S8949/CA2016: the cancellation-token WithAnalyzers overload is obsolete; cancellation is honored by the
         // GetAnalyzerDiagnosticsAsync call below, which is the only place work actually happens.
-#pragma warning disable S8949
+#pragma warning disable S8949, CA2016
         var withAnalyzers = CreateCompilation(source, path, cancellationToken)
             .WithAnalyzers(ImmutableArray.Create(analyzer), options);
-#pragma warning restore S8949
+#pragma warning restore S8949, CA2016
 
         return await withAnalyzers.GetAnalyzerDiagnosticsAsync(cancellationToken).ConfigureAwait(false);
-    }
-
-    private static ImmutableArray<MetadataReference> ResolveFrameworkReferences()
-    {
-        var trustedAssemblies = (string)AppContext.GetData("TRUSTED_PLATFORM_ASSEMBLIES")!;
-
-        return
-        [
-            .. trustedAssemblies
-                .Split(Path.PathSeparator)
-                .Where(path => path.Length != 0)
-                .Select(path => (MetadataReference)MetadataReference.CreateFromFile(path)),
-        ];
     }
 
     /// <summary>Surfaces the given <c>build_property.*</c> pairs through <see cref="AnalyzerConfigOptions"/>.</summary>

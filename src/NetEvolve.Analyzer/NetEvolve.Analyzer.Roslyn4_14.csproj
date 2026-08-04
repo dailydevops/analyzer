@@ -1,0 +1,20 @@
+<Project>
+  <PropertyGroup>
+    <!-- Baseline build; also the one the test projects reference for compile-time access to the
+         analyzer/code-fix types. -->
+    <RoslynApiVersion>4.14.0</RoslynApiVersion>
+  </PropertyGroup>
+
+  <!-- BaseIntermediateOutputPath/BaseOutputPath must be set before Sdk.props is imported (MSB3539),
+       so this project can't use the <Project Sdk="Microsoft.NET.Sdk"> shorthand like its siblings. -->
+  <PropertyGroup>
+    <BaseIntermediateOutputPath>obj\$(MSBuildProjectName)\</BaseIntermediateOutputPath>
+    <BaseOutputPath>bin\$(MSBuildProjectName)\</BaseOutputPath>
+  </PropertyGroup>
+
+  <Import Project="Sdk.props" Sdk="Microsoft.NET.Sdk" />
+
+  <Import Project="NetEvolve.Analyzer.Build.props" />
+
+  <Import Project="Sdk.targets" Sdk="Microsoft.NET.Sdk" />
+</Project>

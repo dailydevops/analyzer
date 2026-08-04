@@ -1,16 +1,38 @@
 <Project Sdk="Microsoft.NET.Sdk">
   <PropertyGroup>
-    <TargetFrameworks>net8.0;net9.0;net10.0</TargetFrameworks>
+    <TargetFrameworks>$(_TestTargetFrameworks)</TargetFrameworks>
     <OutputType>Exe</OutputType>
+    <!-- TUnit.Core's own build-time Polyfill auto-injection (buildTransitive/TUnit.Core.targets) can't
+         actually detect a consumer-declared Polyfill reference (its check runs in a target, too late for the
+         plain ItemGroup it gates), so it always adds its own compile/analyzers-only copy and collides
+         (NU1504) with an explicit one below. Disable it and own the reference ourselves instead. -->
+    <EnableTUnitPolyfills>false</EnableTUnitPolyfills>
+  </PropertyGroup>
+
+  <PropertyGroup Label="Roslyn variant tested per target framework (4.7.0 is build-verified only, see stryker-config.*.json)">
+    <!-- 4.4.0 (the baseline) is the default for every target framework except the two singled out below. -->
+    <_RoslynVariant>4_4</_RoslynVariant>
+    <_RoslynApiVersion>4.4.*</_RoslynApiVersion>
+    <_RoslynVariant Condition=" '$(TargetFramework)' == 'net8.0' ">4_7</_RoslynVariant>
+    <_RoslynApiVersion Condition=" '$(TargetFramework)' == 'net8.0' ">4.7.*</_RoslynApiVersion>
+    <_RoslynVariant Condition=" '$(TargetFramework)' == 'net9.0' ">4_14</_RoslynVariant>
+    <_RoslynApiVersion Condition=" '$(TargetFramework)' == 'net9.0' ">4.14.*</_RoslynApiVersion>
+    <_RoslynVariant Condition=" '$(TargetFramework)' == 'net10.0' ">5_6</_RoslynVariant>
+    <_RoslynApiVersion Condition=" '$(TargetFramework)' == 'net10.0' ">5.6.*</_RoslynApiVersion>
   </PropertyGroup>
 
   <ItemGroup>
     <PackageReference Include="TUnit" />
-    <PackageReference Include="Microsoft.CodeAnalysis.CSharp" />
-    <PackageReference Include="Microsoft.CodeAnalysis.CSharp.Workspaces" />
+    <!-- Backports ModuleInitializerAttribute, NotNullWhenAttribute, and friends onto net472/net48/net481
+         (part of $(_TestTargetFrameworks) on Windows), which the BCL there doesn't ship natively. -->
+    <PackageReference Include="Polyfill" PrivateAssets="all" />
+    <!-- Matches the Roslyn API version of the analyzer variant referenced below, so AnalyzerCompiler
+         drives CompilationWithAnalyzers with the same Roslyn build the analyzer itself compiled against. -->
+    <PackageReference Include="Microsoft.CodeAnalysis.CSharp" VersionOverride="$(_RoslynApiVersion)" />
+    <PackageReference Include="Microsoft.CodeAnalysis.CSharp.Workspaces" VersionOverride="$(_RoslynApiVersion)" />
   </ItemGroup>
 
   <ItemGroup>
-    <ProjectReference Include="..\..\src\NetEvolve.Analyzer\NetEvolve.Analyzer.csproj" />
+    <ProjectReference Include="..\..\src\NetEvolve.Analyzer\NetEvolve.Analyzer.Roslyn$(_RoslynVariant).csproj" />
   </ItemGroup>
 </Project>

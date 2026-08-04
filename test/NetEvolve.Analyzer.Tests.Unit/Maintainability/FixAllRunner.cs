@@ -1,9 +1,8 @@
-namespace NetEvolve.Analyzer.Tests.Unit.Maintainability;
+﻿namespace NetEvolve.Analyzer.Tests.Unit.Maintainability;
 
 using System;
 using System.Collections.Generic;
 using System.Collections.Immutable;
-using System.IO;
 using System.Linq;
 using System.Threading;
 using System.Threading.Tasks;
@@ -27,7 +26,7 @@ using NetEvolve.Analyzer.Providers;
 /// </summary>
 internal static class FixAllRunner
 {
-    private static readonly ImmutableArray<MetadataReference> _references = ResolveFrameworkReferences();
+    private static readonly ImmutableArray<MetadataReference> _references = FrameworkReferences.All;
 
     public static async Task<IReadOnlyDictionary<string, string>> FixAllAsync(
         (string Name, string Content)[] sources,
@@ -154,32 +153,19 @@ internal static class FixAllRunner
     {
         var compilation = (await project.GetCompilationAsync(cancellationToken).ConfigureAwait(false))!;
 
-        // S8949: the cancellation-token WithAnalyzers overload is obsolete; cancellation is honored by
+        // S8949/CA2016: the cancellation-token WithAnalyzers overload is obsolete; cancellation is honored by
         // GetAnalyzerDiagnosticsAsync below.
-#pragma warning disable S8949
+#pragma warning disable S8949, CA2016
         var withAnalyzers = compilation.WithAnalyzers(
             ImmutableArray.Create<DiagnosticAnalyzer>(new OneTypePerFileAnalyzer()),
             project.AnalyzerOptions
         );
-#pragma warning restore S8949
+#pragma warning restore S8949, CA2016
 
         var diagnostics = await withAnalyzers.GetAnalyzerDiagnosticsAsync(cancellationToken).ConfigureAwait(false);
         return diagnostics
             .Where(diagnostic => string.Equals(diagnostic.Id, DiagnosticIds.NE0001, StringComparison.Ordinal))
             .ToImmutableArray();
-    }
-
-    private static ImmutableArray<MetadataReference> ResolveFrameworkReferences()
-    {
-        var trustedAssemblies = (string)AppContext.GetData("TRUSTED_PLATFORM_ASSEMBLIES")!;
-
-        return
-        [
-            .. trustedAssemblies
-                .Split(Path.PathSeparator)
-                .Where(path => path.Length != 0)
-                .Select(path => (MetadataReference)MetadataReference.CreateFromFile(path)),
-        ];
     }
 
     /// <summary>Supplies NE0001 diagnostics to <see cref="FixAllContext"/> by running the analyzer live.</summary>

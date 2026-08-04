@@ -1,17 +1,21 @@
 <Project Sdk="Microsoft.NET.Sdk">
   <PropertyGroup>
-    <!-- Analyzers must target netstandard2.0 so they load in every Roslyn host (VS, MSBuild, dotnet). -->
+    <!-- Pure packing project: no source of its own, just orchestrates and packs the four
+         Roslyn-version builds below (NetEvolve.Analyzer.Roslyn4_4/4_7/4_14/5_6.csproj). -->
     <TargetFramework>netstandard2.0</TargetFramework>
-    <IsRoslynComponent>true</IsRoslynComponent>
-    <EnforceExtendedAnalyzerRules>true</EnforceExtendedAnalyzerRules>
+    <IsPackable>true</IsPackable>
   </PropertyGroup>
+
+  <ItemGroup>
+    <Compile Remove="**/*.cs" />
+  </ItemGroup>
 
   <PropertyGroup Label="Package settings">
     <Description>NetEvolve Roslyn analyzers and code fixes, organized by the standard Microsoft diagnostic categories.</Description>
     <PackageTags>roslyn;analyzers;analyzer;codefix;code-fix;diagnostics;netevolve</PackageTags>
     <DevelopmentDependency>true</DevelopmentDependency>
-    <!-- Pure analyzer package: no lib/, no dependencies; the assembly is placed under analyzers/dotnet/cs
-         by the _PackAnalyzer target below (exactly there, with no target-framework subfolder). -->
+    <!-- Pure analyzer package: no lib/, no dependencies; the assemblies are placed under
+         analyzers/dotnet/roslynX.Y/cs by the _PackAnalyzer target below. -->
     <IncludeBuildOutput>false</IncludeBuildOutput>
     <SuppressDependenciesWhenPacking>true</SuppressDependenciesWhenPacking>
     <TargetsForTfmSpecificContentInPackage>$(TargetsForTfmSpecificContentInPackage);_PackAnalyzer</TargetsForTfmSpecificContentInPackage>
@@ -19,27 +23,16 @@
          a .snupkg would be empty (NU5017), and embedded symbols keep the analyzer debuggable. -->
     <DebugType>embedded</DebugType>
     <IncludeSymbols>false</IncludeSymbols>
-    <!-- RS1038: analyzers and code fixes share this single assembly by design; CodeFixProvider itself
-         lives in Microsoft.CodeAnalysis.Workspaces, so the reference is unavoidable here. The analyzer
-         type never touches Workspaces APIs, so it still loads correctly in command-line builds. -->
-    <NoWarn>$(NoWarn);NU5128;RS1038</NoWarn>
+    <NoWarn>$(NoWarn);NU5128</NoWarn>
   </PropertyGroup>
 
-  <ItemGroup Label="Test access to internals">
-    <InternalsVisibleTo Include="NetEvolve.Analyzer.Tests.Unit" />
-    <InternalsVisibleTo Include="NetEvolve.Analyzer.Tests.Integration" />
-  </ItemGroup>
-
-  <ItemGroup Label="Roslyn">
-    <PackageReference Include="Microsoft.CodeAnalysis.CSharp.Workspaces" PrivateAssets="all" />
-    <PackageReference Include="Microsoft.CodeAnalysis.Analyzers" PrivateAssets="all">
-      <IncludeAssets>runtime; build; native; contentfiles; analyzers; buildtransitive</IncludeAssets>
-    </PackageReference>
-  </ItemGroup>
-
-  <ItemGroup Label="Analyzer release tracking (RS2008)">
-    <AdditionalFiles Include="AnalyzerReleases.Shipped.md" />
-    <AdditionalFiles Include="AnalyzerReleases.Unshipped.md" />
+  <ItemGroup Label="Roslyn-version builds packed into this package">
+    <!-- ReferenceOutputAssembly=false: this project has no code of its own, it only needs each of
+         these to build (so their output exists for _PackAnalyzer below). -->
+    <ProjectReference Include="NetEvolve.Analyzer.Roslyn4_4.csproj" ReferenceOutputAssembly="false" PrivateAssets="all" />
+    <ProjectReference Include="NetEvolve.Analyzer.Roslyn4_7.csproj" ReferenceOutputAssembly="false" PrivateAssets="all" />
+    <ProjectReference Include="NetEvolve.Analyzer.Roslyn4_14.csproj" ReferenceOutputAssembly="false" PrivateAssets="all" />
+    <ProjectReference Include="NetEvolve.Analyzer.Roslyn5_6.csproj" ReferenceOutputAssembly="false" PrivateAssets="all" />
   </ItemGroup>
 
   <ItemGroup Label="Consumer MSBuild props (exposes CompilerVisibleProperty for the rules)">
@@ -47,11 +40,19 @@
     <None Include="build\NetEvolve.Analyzer.props" Pack="true" PackagePath="build\NetEvolve.Analyzer.props" />
   </ItemGroup>
 
-  <!-- Place the built assembly at exactly analyzers/dotnet/cs (no TFM subfolder), so Roslyn discovers it.
-       Runs during pack, after the assembly has been produced. -->
+  <!-- Place every Roslyn-version build at analyzers/dotnet/roslynX.Y/cs. .NET SDKs 8.0.400+ understand
+       this layout ($(SupportsRoslynComponentVersioning)) and load the highest one they support; a plain
+       unversioned analyzers/dotnet/cs fallback was deliberately not added — NuGet doesn't treat it as
+       mutually exclusive with the versioned folders, so a modern SDK would load both at once (duplicate
+       diagnostics) rather than only the fallback on an old one. SDKs older than 8.0.400 (all already out
+       of support) simply get no analyzer from this package. Runs during pack, after every project
+       reference above has built. -->
   <Target Name="_PackAnalyzer">
     <ItemGroup>
-      <TfmSpecificPackageFile Include="$(TargetPath)" PackagePath="analyzers/dotnet/cs/%(Filename)%(Extension)" />
+      <TfmSpecificPackageFile Include="bin\NetEvolve.Analyzer.Roslyn4_4\$(Configuration)\netstandard2.0\$(AssemblyName).dll" PackagePath="analyzers/dotnet/roslyn4.4/cs/%(Filename)%(Extension)" />
+      <TfmSpecificPackageFile Include="bin\NetEvolve.Analyzer.Roslyn4_7\$(Configuration)\netstandard2.0\$(AssemblyName).dll" PackagePath="analyzers/dotnet/roslyn4.7/cs/%(Filename)%(Extension)" />
+      <TfmSpecificPackageFile Include="bin\NetEvolve.Analyzer.Roslyn4_14\$(Configuration)\netstandard2.0\$(AssemblyName).dll" PackagePath="analyzers/dotnet/roslyn4.14/cs/%(Filename)%(Extension)" />
+      <TfmSpecificPackageFile Include="bin\NetEvolve.Analyzer.Roslyn5_6\$(Configuration)\netstandard2.0\$(AssemblyName).dll" PackagePath="analyzers/dotnet/roslyn5.6/cs/%(Filename)%(Extension)" />
     </ItemGroup>
   </Target>
 </Project>

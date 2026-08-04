@@ -22,7 +22,7 @@ public sealed class AnalyzerCompilerTests
 
             public class Order
             {
-                public DateTime CreatedAt { get; init; }
+                public DateTime CreatedAt { get; set; }
             }
             """;
 

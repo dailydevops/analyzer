@@ -1,4 +1,4 @@
-namespace NetEvolve.Analyzer.Providers;
+﻿namespace NetEvolve.Analyzer.Providers;
 
 using System;
 using System.Collections.Generic;
@@ -176,14 +176,14 @@ internal sealed class SequentialFixAllProvider : FixAllProvider
         var project = document.Project;
         var compilation = (await project.GetCompilationAsync(cancellationToken).ConfigureAwait(false))!;
 
-        // S8949: the cancellation-token WithAnalyzers overload is obsolete; cancellation is honored by
+        // S8949/CA2016: the cancellation-token WithAnalyzers overload is obsolete; cancellation is honored by
         // GetAnalyzerDiagnosticsAsync below.
-#pragma warning disable S8949
+#pragma warning disable S8949, CA2016
         var withAnalyzers = compilation.WithAnalyzers(
             ImmutableArray.Create(_analyzerFactory()),
             project.AnalyzerOptions
         );
-#pragma warning restore S8949
+#pragma warning restore S8949, CA2016
 
         var diagnostics = await withAnalyzers.GetAnalyzerDiagnosticsAsync(cancellationToken).ConfigureAwait(false);
 
