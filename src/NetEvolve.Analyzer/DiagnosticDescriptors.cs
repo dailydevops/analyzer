@@ -147,6 +147,25 @@ internal static class DiagnosticDescriptors
     );
 
     /// <summary>
+    /// NE0010 — a method returning <c>Task</c>, <c>Task&lt;T&gt;</c>, <c>ValueTask</c>,
+    /// <c>ValueTask&lt;T&gt;</c>, or <c>IAsyncEnumerable&lt;T&gt;</c> should accept a
+    /// <c>CancellationToken</c> parameter.
+    /// </summary>
+    public static readonly DiagnosticDescriptor RequireCancellationTokenParameter = new(
+        id: DiagnosticIds.NE0010,
+        title: "Accept a CancellationToken parameter on an asynchronous method",
+        messageFormat: "Method '{0}' returns {1} and should accept a CancellationToken parameter",
+        category: DiagnosticCategories.Usage,
+        defaultSeverity: DiagnosticSeverity.Warning,
+        isEnabledByDefault: true,
+        description: "A method returning Task, Task<T>, ValueTask, ValueTask<T>, or IAsyncEnumerable<T> "
+            + "represents an operation a caller may want to cancel; accepting a CancellationToken parameter "
+            + "lets callers request cancellation and lets the method propagate it to the operations it awaits "
+            + "or yields from.",
+        helpLinkUri: DiagnosticIds.HelpLink(DiagnosticIds.NE0010)
+    );
+
+    /// <summary>
     /// NE0011 — avoid <c>#region</c>/<c>#endregion</c> directives; reported as a warning when nested inside a
     /// member body, and as a suggestion everywhere else.
     /// </summary>
