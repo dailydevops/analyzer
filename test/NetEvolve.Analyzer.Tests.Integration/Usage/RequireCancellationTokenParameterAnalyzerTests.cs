@@ -24,6 +24,28 @@ public sealed class RequireCancellationTokenParameterAnalyzerTests
     public async Task ReturnsTask_WithoutToken_ReportsNe0010()
     {
         const string source = """
+            using System.Threading;
+            using System.Threading.Tasks;
+
+            public sealed class Sample
+            {
+                public Task Run() => LoadAsync();
+
+                private static Task LoadAsync(CancellationToken cancellationToken = default) => Task.CompletedTask;
+            }
+            """;
+
+        var diagnostics = await AnalyzerCompiler
+            .GetAnalyzerDiagnosticsAsync(source, new RequireCancellationTokenParameterAnalyzer())
+            .ConfigureAwait(false);
+
+        await Assert.That(diagnostics.Count(IsNe0010)).IsEqualTo(1);
+    }
+
+    [Test]
+    public async Task ReturnsTask_NoAppendableCallInBody_ReportsNothing()
+    {
+        const string source = """
             using System.Threading.Tasks;
 
             public sealed class Sample
@@ -36,7 +58,7 @@ public sealed class RequireCancellationTokenParameterAnalyzerTests
             .GetAnalyzerDiagnosticsAsync(source, new RequireCancellationTokenParameterAnalyzer())
             .ConfigureAwait(false);
 
-        await Assert.That(diagnostics.Count(IsNe0010)).IsEqualTo(1);
+        await Assert.That(diagnostics.Any(IsNe0010)).IsFalse();
     }
 
     [Test]

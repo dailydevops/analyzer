@@ -3,8 +3,11 @@ namespace NetEvolve.Analyzer.Usage;
 using System;
 using System.Collections.Immutable;
 using System.Linq;
+using System.Threading;
 using Microsoft.CodeAnalysis;
+using Microsoft.CodeAnalysis.CSharp.Syntax;
 using Microsoft.CodeAnalysis.Diagnostics;
+using NetEvolve.Analyzer.Helpers;
 
 /// <summary>
 /// NE0010 — reports a method whose return type is <c>Task</c>, <c>Task&lt;T&gt;</c>, <c>ValueTask</c>,
@@ -14,6 +17,12 @@ using Microsoft.CodeAnalysis.Diagnostics;
 /// implement; a method that implicitly implements an interface member is left alone for the same reason. An
 /// interface's own method declaration is still flagged, since it is the contract other members are
 /// constrained by. Partial methods are reported only once, on the implementing declaration.
+///
+/// A method that has a body is only flagged when that body contains at least one call site a
+/// <see cref="System.Threading.CancellationToken"/> could actually be passed to (see
+/// <see cref="CancellationTokenCallSites"/>); otherwise the parameter the code fix would add could never
+/// be used, leaving nothing but an unused-parameter warning in its place. A method without a body — abstract,
+/// interface, or extern — has no such body to leave with an unused parameter, so it is always flagged.
 /// </summary>
 [DiagnosticAnalyzer(LanguageNames.CSharp)]
 public sealed class RequireCancellationTokenParameterAnalyzer : DiagnosticAnalyzer
@@ -54,49 +63,112 @@ public sealed class RequireCancellationTokenParameterAnalyzer : DiagnosticAnalyz
             compilation.GetTypeByMetadataName("System.Collections.Generic.IAsyncEnumerable`1")
         );
 
+        // A method with no body (abstract, interface, extern) is reported straight from the symbol action; a
+        // method with a body is only reported once the code block action below has confirmed the body actually
+        // has somewhere to use the token — that action supplies a SemanticModel without this one having to call
+        // Compilation.GetSemanticModel() itself (see RS1030).
         context.RegisterSymbolAction(
-            symbolContext => AnalyzeMethod(symbolContext, cancellationTokenType, wellKnownReturnTypes),
+            symbolContext => AnalyzeMethodSymbol(symbolContext, cancellationTokenType, wellKnownReturnTypes),
             SymbolKind.Method
+        );
+        context.RegisterCodeBlockAction(codeBlockContext =>
+            AnalyzeMethodBody(codeBlockContext, cancellationTokenType, wellKnownReturnTypes)
         );
     }
 
-    private static void AnalyzeMethod(
+    private static void AnalyzeMethodSymbol(
         SymbolAnalysisContext context,
         INamedTypeSymbol cancellationTokenType,
         WellKnownReturnTypes wellKnownReturnTypes
     )
     {
         var method = (IMethodSymbol)context.Symbol;
+        if (!IsCandidate(method, cancellationTokenType, wellKnownReturnTypes, out var returnTypeDescription))
+        {
+            return;
+        }
+
+        var declaration = GetDeclaration(method, context.CancellationToken);
+        if (declaration is { Body: not null } or { ExpressionBody: not null })
+        {
+            // Has a body; AnalyzeMethodBody reports it, once it has confirmed the body can use the token.
+            return;
+        }
+
+        Report(context.ReportDiagnostic, method, returnTypeDescription!);
+    }
+
+    private static void AnalyzeMethodBody(
+        CodeBlockAnalysisContext context,
+        INamedTypeSymbol cancellationTokenType,
+        WellKnownReturnTypes wellKnownReturnTypes
+    )
+    {
+        if (
+            context.OwningSymbol is not IMethodSymbol method
+            || context.CodeBlock is not MethodDeclarationSyntax declaration
+        )
+        {
+            return;
+        }
+
+        if (!IsCandidate(method, cancellationTokenType, wellKnownReturnTypes, out var returnTypeDescription))
+        {
+            return;
+        }
+
+        if (!CancellationTokenCallSites.HasUsableCancellationToken(context.SemanticModel, declaration))
+        {
+            return;
+        }
+
+        Report(context.ReportDiagnostic, method, returnTypeDescription!);
+    }
+
+    // The checks every candidate method must pass regardless of whether it's reported from the symbol action
+    // (no body) or the code block action (has a body): return type, override/explicit-interface/partial-definition
+    // exclusions, implicit interface implementation, and whether it already has a CancellationToken parameter.
+    private static bool IsCandidate(
+        IMethodSymbol method,
+        INamedTypeSymbol cancellationTokenType,
+        WellKnownReturnTypes wellKnownReturnTypes,
+        out string? returnTypeDescription
+    )
+    {
+        returnTypeDescription = null;
 
         // An explicit interface implementation's MethodKind is ExplicitInterfaceImplementation, never Ordinary,
         // so it's already excluded by the check above — there's no case where a method reaches this point with
         // a non-empty ExplicitInterfaceImplementations list.
         if (method.MethodKind != MethodKind.Ordinary || method.IsOverride || method.IsPartialDefinition)
         {
-            return;
+            return false;
         }
 
-        var returnTypeDescription = DescribeReturnType(method.ReturnType, wellKnownReturnTypes);
+        returnTypeDescription = DescribeReturnType(method.ReturnType, wellKnownReturnTypes);
         if (returnTypeDescription is null)
         {
-            return;
+            return false;
         }
 
         if (ImplementsInterfaceMemberImplicitly(method))
         {
-            return;
+            return false;
         }
 
         var hasCancellationToken = method.Parameters.Any(parameter =>
             SymbolEqualityComparer.Default.Equals(parameter.Type, cancellationTokenType)
         );
-        if (hasCancellationToken)
-        {
-            return;
-        }
+        return !hasCancellationToken;
+    }
 
+    private static MethodDeclarationSyntax? GetDeclaration(IMethodSymbol method, CancellationToken cancellationToken) =>
+        method.DeclaringSyntaxReferences.FirstOrDefault()?.GetSyntax(cancellationToken) as MethodDeclarationSyntax;
+
+    private static void Report(Action<Diagnostic> reportDiagnostic, IMethodSymbol method, string returnTypeDescription)
+    {
         var location = method.Locations.IsEmpty ? Location.None : method.Locations[0];
-        context.ReportDiagnostic(
+        reportDiagnostic(
             Diagnostic.Create(
                 DiagnosticDescriptors.RequireCancellationTokenParameter,
                 location,

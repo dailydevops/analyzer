@@ -32,17 +32,21 @@ public sealed class RequireCancellationTokenParameterAnalyzerTests
         await Assert.That(caught).IsNotNull();
     }
 
-    // ---- Positive: every supported return type is flagged when the token parameter is missing -----------
+    // ---- Positive: every supported return type is flagged when the token parameter is missing, given a body
+    // ---- that has somewhere to pass the token on to (see the "body eligibility" section further down) -------
 
     [Test]
     public Task ReturnsTask_Reports() =>
         CSharpAnalyzerVerifier<RequireCancellationTokenParameterAnalyzer>.VerifyAnalyzerAsync(
             """
+            using System.Threading;
             using System.Threading.Tasks;
 
             public sealed class Sample
             {
-                public Task {|NE0010:Run|}() => Task.CompletedTask;
+                public Task {|NE0010:Run|}() => LoadAsync();
+
+                private static Task LoadAsync(CancellationToken cancellationToken = default) => Task.CompletedTask;
             }
             """
         );
@@ -51,11 +55,15 @@ public sealed class RequireCancellationTokenParameterAnalyzerTests
     public Task ReturnsTaskOfT_Reports() =>
         CSharpAnalyzerVerifier<RequireCancellationTokenParameterAnalyzer>.VerifyAnalyzerAsync(
             """
+            using System.Threading;
             using System.Threading.Tasks;
 
             public sealed class Sample
             {
-                public Task<int> {|NE0010:Run|}() => Task.FromResult(0);
+                public Task<int> {|NE0010:Run|}() => LoadAsync();
+
+                private static Task<int> LoadAsync(CancellationToken cancellationToken = default) =>
+                    Task.FromResult(0);
             }
             """
         );
@@ -64,11 +72,14 @@ public sealed class RequireCancellationTokenParameterAnalyzerTests
     public Task ReturnsValueTask_Reports() =>
         CSharpAnalyzerVerifier<RequireCancellationTokenParameterAnalyzer>.VerifyAnalyzerAsync(
             """
+            using System.Threading;
             using System.Threading.Tasks;
 
             public sealed class Sample
             {
-                public ValueTask {|NE0010:Run|}() => default;
+                public ValueTask {|NE0010:Run|}() => LoadAsync();
+
+                private static ValueTask LoadAsync(CancellationToken cancellationToken = default) => default;
             }
             """
         );
@@ -77,11 +88,14 @@ public sealed class RequireCancellationTokenParameterAnalyzerTests
     public Task ReturnsValueTaskOfT_Reports() =>
         CSharpAnalyzerVerifier<RequireCancellationTokenParameterAnalyzer>.VerifyAnalyzerAsync(
             """
+            using System.Threading;
             using System.Threading.Tasks;
 
             public sealed class Sample
             {
-                public ValueTask<int> {|NE0010:Run|}() => default;
+                public ValueTask<int> {|NE0010:Run|}() => LoadAsync();
+
+                private static ValueTask<int> LoadAsync(CancellationToken cancellationToken = default) => default;
             }
             """
         );
@@ -91,10 +105,14 @@ public sealed class RequireCancellationTokenParameterAnalyzerTests
         CSharpAnalyzerVerifier<RequireCancellationTokenParameterAnalyzer>.VerifyAnalyzerAsync(
             """
             using System.Collections.Generic;
+            using System.Threading;
 
             public sealed class Sample
             {
-                public IAsyncEnumerable<int> {|NE0010:Run|}() => throw new System.NotSupportedException();
+                public IAsyncEnumerable<int> {|NE0010:Run|}() => LoadAsync();
+
+                private static IAsyncEnumerable<int> LoadAsync(CancellationToken cancellationToken = default) =>
+                    throw new System.NotSupportedException();
             }
             """
         );
@@ -289,6 +307,7 @@ public sealed class RequireCancellationTokenParameterAnalyzerTests
     public Task PartialMethod_ReportsOnce() =>
         CSharpAnalyzerVerifier<RequireCancellationTokenParameterAnalyzer>.VerifyAnalyzerAsync(
             """
+            using System.Threading;
             using System.Threading.Tasks;
 
             public sealed partial class Sample
@@ -298,7 +317,59 @@ public sealed class RequireCancellationTokenParameterAnalyzerTests
 
             public sealed partial class Sample
             {
-                public partial Task {|NE0010:Run|}() => Task.CompletedTask;
+                public partial Task {|NE0010:Run|}() => LoadAsync();
+
+                private static Task LoadAsync(CancellationToken cancellationToken = default) => Task.CompletedTask;
+            }
+            """
+        );
+
+    // ---- Body eligibility: a method with a body is only flagged when the body has somewhere to actually pass
+    // ---- the new parameter on to; otherwise the code fix would add a parameter that stays unused ------------
+
+    [Test]
+    public Task BodyHasNoAppendableCall_NoDiagnostic() =>
+        CSharpAnalyzerVerifier<RequireCancellationTokenParameterAnalyzer>.VerifyAnalyzerAsync(
+            """
+            using System.Threading.Tasks;
+
+            public sealed class Sample
+            {
+                public Task Run() => Task.CompletedTask;
+            }
+            """
+        );
+
+    [Test]
+    public Task AppendableCallOnlyInsideLocalFunction_NoDiagnostic() =>
+        CSharpAnalyzerVerifier<RequireCancellationTokenParameterAnalyzer>.VerifyAnalyzerAsync(
+            """
+            using System.Threading;
+            using System.Threading.Tasks;
+
+            public sealed class Sample
+            {
+                public Task Run()
+                {
+                    return Local();
+
+                    Task Local() => LoadAsync();
+                }
+
+                private static Task LoadAsync(CancellationToken cancellationToken = default) => Task.CompletedTask;
+            }
+            """
+        );
+
+    [Test]
+    public Task AbstractMethod_NoBody_AlwaysReports() =>
+        CSharpAnalyzerVerifier<RequireCancellationTokenParameterAnalyzer>.VerifyAnalyzerAsync(
+            """
+            using System.Threading.Tasks;
+
+            public abstract class Sample
+            {
+                public abstract Task {|NE0010:Run|}();
             }
             """
         );
