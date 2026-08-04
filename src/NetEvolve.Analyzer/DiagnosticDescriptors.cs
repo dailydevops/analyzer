@@ -126,4 +126,23 @@ internal static class DiagnosticDescriptors
             + "such.",
         helpLinkUri: DiagnosticIds.HelpLink(DiagnosticIds.NE0008)
     );
+
+    /// <summary>
+    /// NE0009 — a method with a <see cref="System.Threading.CancellationToken"/> parameter should check for
+    /// cancellation at the start of its body.
+    /// </summary>
+    public static readonly DiagnosticDescriptor RequireCancellationCheck = new(
+        id: DiagnosticIds.NE0009,
+        title: "Check for cancellation at the start of the method body",
+        messageFormat: "Method '{0}' has a CancellationToken parameter but does not check for cancellation at "
+            + "the start of its body",
+        category: DiagnosticCategories.Usage,
+        defaultSeverity: DiagnosticSeverity.Warning,
+        isEnabledByDefault: true,
+        description: "A method accepting a CancellationToken should honor it as early as possible. As the "
+            + "first statement after any leading argument-validation guard clauses, call "
+            + "'token.ThrowIfCancellationRequested()' or check 'token.IsCancellationRequested' and return, so "
+            + "cancellation is observed before any other work runs.",
+        helpLinkUri: DiagnosticIds.HelpLink(DiagnosticIds.NE0009)
+    );
 }
