@@ -145,4 +145,22 @@ internal static class DiagnosticDescriptors
             + "cancellation is observed before any other work runs.",
         helpLinkUri: DiagnosticIds.HelpLink(DiagnosticIds.NE0009)
     );
+
+    /// <summary>
+    /// NE0011 — avoid <c>#region</c>/<c>#endregion</c> directives; reported as a warning when nested inside a
+    /// member body, and as a suggestion everywhere else.
+    /// </summary>
+    public static readonly DiagnosticDescriptor AvoidRegionDirectives = new(
+        id: DiagnosticIds.NE0011,
+        title: "Avoid #region directives",
+        messageFormat: "Avoid using '#region' directives",
+        category: DiagnosticCategories.Style,
+        defaultSeverity: DiagnosticSeverity.Warning,
+        isEnabledByDefault: true,
+        description: "#region directives encourage hiding code instead of decomposing it into smaller, "
+            + "well-named members or types. A #region nested inside a member body is reported as a warning; "
+            + "one wrapping type-, namespace-, or file-level content (whole classes, using directives, …) is "
+            + "reported as a suggestion.",
+        helpLinkUri: DiagnosticIds.HelpLink(DiagnosticIds.NE0011)
+    );
 }
