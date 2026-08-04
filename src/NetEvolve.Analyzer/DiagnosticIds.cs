@@ -68,6 +68,12 @@ internal static class DiagnosticIds
     /// </summary>
     public const string NE0008 = DiagnosticPrefix + "0008";
 
+    /// <summary>
+    /// NE0009 — a method with a <see cref="System.Threading.CancellationToken"/> parameter should check for
+    /// cancellation at the start of its body.
+    /// </summary>
+    public const string NE0009 = DiagnosticPrefix + "0009";
+
     // Suppressors
 
     /// <summary>

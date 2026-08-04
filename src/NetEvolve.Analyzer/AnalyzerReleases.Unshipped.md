@@ -13,3 +13,4 @@ NE0005 | Usage | Warning | UseIsNotNullAnalyzer, [Documentation](https://github.
 NE0006 | Usage | Warning | UseIsNotNullOverIsObjectAnalyzer, [Documentation](https://github.com/dailydevops/analyzer/blob/main/docs/rules/NE0006.md)
 NE0007 | Documentation | Warning | UseLangwordAnalyzer, [Documentation](https://github.com/dailydevops/analyzer/blob/main/docs/rules/NE0007.md)
 NE0008 | Documentation | Warning | NativeTypeCrefAnalyzer, [Documentation](https://github.com/dailydevops/analyzer/blob/main/docs/rules/NE0008.md)
+NE0009 | Usage | Warning | RequireCancellationCheckAnalyzer, [Documentation](https://github.com/dailydevops/analyzer/blob/main/docs/rules/NE0009.md)
