@@ -11,9 +11,11 @@ automatically at build time, with automatic fixes wherever a fix is unambiguous.
 
 ## Overview
 
-The solution is a single analyzer package plus its test suites. The analyzer assembly targets
-`netstandard2.0` so it loads in every Roslyn host (Visual Studio, MSBuild, the `dotnet` CLI) and ships
-as a development-only dependency: no runtime assemblies are added to a consuming project.
+The solution is a single analyzer package plus its test suites. It targets `netstandard2.0` and ships
+as a development-only dependency: no runtime assemblies are added to a consuming project. The package
+builds against four Roslyn API versions (4.4.0, 4.7.0, 4.14.0, and the latest, 5.6.0), packed into
+version-specific folders so the .NET SDK automatically loads the highest one it supports (see
+[NetEvolve.Analyzer](src/NetEvolve.Analyzer/README.md#supported-roslyn-versions) for details).
 
 Rules are organized by the standard [Microsoft diagnostic
 categories](https://learn.microsoft.com/dotnet/fundamentals/code-analysis/categories) (Design,
@@ -107,15 +109,20 @@ csharpier format .
 ### Project Structure
 
 ```txt
-src/                              # Production code
-└── NetEvolve.Analyzer/          # Roslyn analyzers, code fixes, and helpers, grouped by diagnostic category
+src/                                            # Production code
+└── NetEvolve.Analyzer/                         # Roslyn analyzers, code fixes, and helpers, grouped by diagnostic category
+    ├── NetEvolve.Analyzer.csproj               # Packing project (no source of its own)
+    ├── NetEvolve.Analyzer.Roslyn4_4.csproj     # Builds the source against Roslyn 4.4.0 (referenced by tests targeting net8.0)
+    ├── NetEvolve.Analyzer.Roslyn4_7.csproj     # Builds the source against Roslyn 4.7.0 (build-verified only, not referenced by tests)
+    ├── NetEvolve.Analyzer.Roslyn4_14.csproj    # Builds the source against Roslyn 4.14.0 (referenced by tests targeting net9.0)
+    └── NetEvolve.Analyzer.Roslyn5_6.csproj     # Builds the source against Roslyn 5.6.0 (latest; referenced by tests targeting net10.0)
 
-test/                             # Test projects
-├── NetEvolve.Analyzer.Tests.Unit/         # Unit tests for analyzers, code fixes, and helpers
-└── NetEvolve.Analyzer.Tests.Integration/  # Integration tests against real compilations
+test/                                           # Test projects
+├── NetEvolve.Analyzer.Tests.Unit/              # Unit tests for analyzers, code fixes, and helpers
+└── NetEvolve.Analyzer.Tests.Integration/       # Integration tests against real compilations
 
 docs/
-└── rules/                        # One Markdown file per diagnostic (NE0001.md, NE0002.md, ...)
+└── rules/                                      # One Markdown file per diagnostic (NE0001.md, NE0002.md, ...)
 ```
 
 ## Architecture

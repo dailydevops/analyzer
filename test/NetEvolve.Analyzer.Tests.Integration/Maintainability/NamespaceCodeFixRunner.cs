@@ -1,4 +1,4 @@
-namespace NetEvolve.Analyzer.Tests.Integration.Maintainability;
+﻿namespace NetEvolve.Analyzer.Tests.Integration.Maintainability;
 
 using System;
 using System.Collections.Generic;
@@ -25,7 +25,7 @@ using NetEvolve.Analyzer.Maintainability;
 /// </summary>
 internal static class NamespaceCodeFixRunner
 {
-    private static readonly ImmutableArray<MetadataReference> _references = ResolveFrameworkReferences();
+    private static readonly ImmutableArray<MetadataReference> _references = FrameworkReferences.All;
 
     public static async Task<IReadOnlyDictionary<string, string>> ApplyAsync(
         (string Path, string Content)[] sources,
@@ -101,14 +101,14 @@ internal static class NamespaceCodeFixRunner
         var project = solution.GetProject(projectId)!;
         var compilation = (await project.GetCompilationAsync(cancellationToken).ConfigureAwait(false))!;
 
-        // S8949: the cancellation-token WithAnalyzers overload is obsolete; cancellation is honored by
+        // S8949/CA2016: the cancellation-token WithAnalyzers overload is obsolete; cancellation is honored by
         // GetAnalyzerDiagnosticsAsync below.
-#pragma warning disable S8949
+#pragma warning disable S8949, CA2016
         var withAnalyzers = compilation.WithAnalyzers(
             ImmutableArray.Create<DiagnosticAnalyzer>(new NamespaceMatchesFolderAnalyzer()),
             project.AnalyzerOptions
         );
-#pragma warning restore S8949
+#pragma warning restore S8949, CA2016
 
         var diagnostics = await withAnalyzers.GetAnalyzerDiagnosticsAsync(cancellationToken).ConfigureAwait(false);
         var diagnostic = diagnostics.First(d => string.Equals(d.Id, DiagnosticIds.NE0002, StringComparison.Ordinal));
@@ -125,18 +125,5 @@ internal static class NamespaceCodeFixRunner
 
         var operations = await actions[0].GetOperationsAsync(cancellationToken).ConfigureAwait(false);
         return operations.OfType<ApplyChangesOperation>().First().ChangedSolution;
-    }
-
-    private static ImmutableArray<MetadataReference> ResolveFrameworkReferences()
-    {
-        var trustedAssemblies = (string)AppContext.GetData("TRUSTED_PLATFORM_ASSEMBLIES")!;
-
-        return
-        [
-            .. trustedAssemblies
-                .Split(Path.PathSeparator)
-                .Where(path => path.Length != 0)
-                .Select(path => (MetadataReference)MetadataReference.CreateFromFile(path)),
-        ];
     }
 }

@@ -12,4 +12,12 @@
     <!-- Workaround, until https://github.com/GitTools/GitVersion/pull/4206 is released -->
     <GitVersionTargetFramework>net10.0</GitVersionTargetFramework>
   </PropertyGroup>
+  <PropertyGroup Label="Target frameworks">
+    <_NetTargetFrameworks>net6.0;net7.0;net8.0;net9.0;net10.0</_NetTargetFrameworks>
+    <_ClassicTargetFrameworks>net472;net48;net481</_ClassicTargetFrameworks>
+    <_TestTargetFrameworks>$(_NetTargetFrameworks)</_TestTargetFrameworks>
+    <_TestTargetFrameworks Condition=" '$(OS)' == 'Windows_NT' ">$(_TestTargetFrameworks);$(_ClassicTargetFrameworks)</_TestTargetFrameworks>
+    <CheckEolTargetFramework>false</CheckEolTargetFramework>
+    <SuppressTfmSupportBuildWarnings>true</SuppressTfmSupportBuildWarnings>
+  </PropertyGroup>
 </Project>

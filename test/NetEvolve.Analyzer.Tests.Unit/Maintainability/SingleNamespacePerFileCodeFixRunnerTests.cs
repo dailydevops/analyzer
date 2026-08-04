@@ -57,7 +57,7 @@ public sealed class SingleNamespacePerFileCodeFixRunnerTests
 
         var text = result["Circle.cs"];
         await Assert.That(text.Contains("namespace Geometry.Shapes;", StringComparison.Ordinal)).IsTrue();
-        await Assert.That(text.EndsWith('\n')).IsFalse();
+        await Assert.That(text.EndsWith('\n', StringComparison.Ordinal)).IsFalse();
     }
 
     [Test]

@@ -38,9 +38,9 @@ dotnet add package NetEvolve.Analyzer
 <PackageReference Include="NetEvolve.Analyzer" Version="x.x.x" PrivateAssets="all" />
 ```
 
-The package ships only the analyzer assembly under `analyzers/dotnet/cs` and adds no runtime
-dependencies to your project; `PrivateAssets="all"` keeps it from flowing to your own package
-consumers.
+The package ships the analyzer assembly built separately against four Roslyn API versions (see
+[Supported Roslyn versions](#supported-roslyn-versions)) and adds no runtime dependencies to your
+project; `PrivateAssets="all"` keeps it from flowing to your own package consumers.
 
 ## Quick Start
 
@@ -134,6 +134,18 @@ for the next one.
 - A project compiling with a Roslyn-based compiler (any currently supported .NET SDK)
 - No target-framework restriction on the consuming project — the analyzer runs against the compiler,
   not your project's target framework
+
+## Supported Roslyn versions
+
+The analyzer's source is built separately against four Roslyn API (`Microsoft.CodeAnalysis.CSharp`)
+versions — 4.4.0, 4.7.0, 4.14.0, and the latest, 5.6.0 — each packed into its own
+`analyzers/dotnet/roslynX.Y/cs` folder. .NET SDKs from 8.0.400 onward select the highest version they
+support automatically; you don't need to configure anything.
+
+SDKs that predate this selection feature don't load any analyzer build from this package (rather than
+an incorrect or duplicated one) — in practice this only affects unpatched, out-of-support SDKs, since
+the selection logic lives in the NuGet client bundled with the SDK and has been serviced into every
+currently maintained release, including older LTS versions like .NET 6.
 
 ## Documentation
 

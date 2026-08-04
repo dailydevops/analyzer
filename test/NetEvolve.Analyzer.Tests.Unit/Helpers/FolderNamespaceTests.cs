@@ -1,4 +1,4 @@
-namespace NetEvolve.Analyzer.Tests.Unit.Helpers;
+﻿namespace NetEvolve.Analyzer.Tests.Unit.Helpers;
 
 using System;
 using System.Collections.Immutable;

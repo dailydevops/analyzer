@@ -1,0 +1,50 @@
+<Project>
+  <!--
+    Shared settings for every Roslyn-version-specific project in this folder
+    (NetEvolve.Analyzer.csproj plus the NetEvolve.Analyzer.Roslyn*.csproj siblings).
+    Each of them sets RoslynApiVersion and imports this file; they all compile the
+    same *.cs files (default SDK globbing) into a separate obj/bin subfolder keyed
+    by the project name, so they don't collide with one another.
+  -->
+  <PropertyGroup>
+    <TargetFramework>netstandard2.0</TargetFramework>
+    <AssemblyName>NetEvolve.Analyzer</AssemblyName>
+    <RootNamespace>NetEvolve.Analyzer</RootNamespace>
+    <IsRoslynComponent>true</IsRoslynComponent>
+    <EnforceExtendedAnalyzerRules>true</EnforceExtendedAnalyzerRules>
+    <IsPackable Condition=" '$(IsPackable)' == '' ">false</IsPackable>
+    <Description>NetEvolve Roslyn analyzers and code fixes, organized by the standard Microsoft diagnostic categories.</Description>
+    <!-- RS1038: analyzers and code fixes share this single assembly by design; CodeFixProvider itself
+         lives in Microsoft.CodeAnalysis.Workspaces, so the reference is unavoidable here. The analyzer
+         type never touches Workspaces APIs, so it still loads correctly in command-line builds. -->
+    <NoWarn>$(NoWarn);RS1038</NoWarn>
+  </PropertyGroup>
+
+  <ItemGroup Label="Test access to internals">
+    <InternalsVisibleTo Include="NetEvolve.Analyzer.Tests.Unit" />
+    <InternalsVisibleTo Include="NetEvolve.Analyzer.Tests.Integration" />
+  </ItemGroup>
+
+  <ItemGroup Label="Exclude sibling variants' obj/bin folders">
+    <!-- Default item excludes only strip THIS project's own obj\$(MSBuildProjectName)\ / bin\$(MSBuildProjectName)\
+         folder; without this, default *.cs globbing would also pick up every other variant's generated
+         AssemblyInfo.cs (and anything else under obj\/bin\), since they all live in this same directory. -->
+    <Compile Remove="obj\**;bin\**" />
+  </ItemGroup>
+
+  <ItemGroup Label="Roslyn">
+    <!-- Central Package Management's transitive pinning would otherwise force the baseline
+         Microsoft.CodeAnalysis.CSharp version back onto every other variant's Workspaces
+         dependency, so it needs the same explicit VersionOverride. -->
+    <PackageReference Include="Microsoft.CodeAnalysis.CSharp" VersionOverride="$(RoslynApiVersion)" PrivateAssets="all" />
+    <PackageReference Include="Microsoft.CodeAnalysis.CSharp.Workspaces" VersionOverride="$(RoslynApiVersion)" PrivateAssets="all" />
+    <PackageReference Include="Microsoft.CodeAnalysis.Analyzers" PrivateAssets="all">
+      <IncludeAssets>runtime; build; native; contentfiles; analyzers; buildtransitive</IncludeAssets>
+    </PackageReference>
+  </ItemGroup>
+
+  <ItemGroup Label="Analyzer release tracking (RS2008)">
+    <AdditionalFiles Include="AnalyzerReleases.Shipped.md" />
+    <AdditionalFiles Include="AnalyzerReleases.Unshipped.md" />
+  </ItemGroup>
+</Project>

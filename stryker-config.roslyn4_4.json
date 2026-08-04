@@ -1,7 +1,7 @@
 {
   "stryker-config": {
     "solution": "Analyzer.slnx",
-    "project": "NetEvolve.Analyzer.csproj",
+    "project": "NetEvolve.Analyzer.Roslyn4_4.csproj",
     "test-projects": [
       "test/NetEvolve.Analyzer.Tests.Unit/NetEvolve.Analyzer.Tests.Unit.csproj",
       "test/NetEvolve.Analyzer.Tests.Integration/NetEvolve.Analyzer.Tests.Integration.csproj"
@@ -14,7 +14,7 @@
       "break": 0
     },
     "dashboard": {
-      "module": "NetEvolve.Analyzer"
+      "module": "NetEvolve.Analyzer.Roslyn4_4"
     }
   }
 }
