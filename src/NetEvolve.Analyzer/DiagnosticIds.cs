@@ -74,6 +74,12 @@ internal static class DiagnosticIds
     /// </summary>
     public const string NE0009 = DiagnosticPrefix + "0009";
 
+    /// <summary>
+    /// NE0010 — a method returning <c>Task</c>, <c>Task&lt;T&gt;</c>, <c>ValueTask</c>, <c>ValueTask&lt;T&gt;</c>,
+    /// or <c>IAsyncEnumerable&lt;T&gt;</c> should accept a <c>CancellationToken</c> parameter.
+    /// </summary>
+    public const string NE0010 = DiagnosticPrefix + "0010";
+
     // Style
 
     /// <summary>
