@@ -148,6 +148,32 @@ public sealed class UseLangwordAnalyzerTests
             """
         );
 
+    // ---- Negative: native type names are excluded from the recognized keyword set -------------------------
+
+    [Test]
+    public Task ReservedTypeKeyword_NoDiagnostic() =>
+        CSharpAnalyzerVerifier<UseLangwordAnalyzer>.VerifyAnalyzerAsync(
+            """
+            public sealed class Sample
+            {
+                /// <summary>Gets the <c>string</c> value.</summary>
+                public string? Value => null;
+            }
+            """
+        );
+
+    [Test]
+    public Task ContextualTypeKeyword_NoDiagnostic() =>
+        CSharpAnalyzerVerifier<UseLangwordAnalyzer>.VerifyAnalyzerAsync(
+            """
+            public sealed class Sample
+            {
+                /// <summary>Gets the <c>nint</c> value.</summary>
+                public nint Value => 0;
+            }
+            """
+        );
+
     // ---- Negative: a plain identifier/word that is not a C# keyword at all --------------------------------
 
     [Test]
