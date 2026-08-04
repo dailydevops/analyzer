@@ -1,4 +1,4 @@
-namespace NetEvolve.Analyzer.Tests.Unit;
+﻿namespace NetEvolve.Analyzer.Tests.Unit;
 
 using System.Threading.Tasks;
 using TUnit.Assertions;
@@ -12,7 +12,7 @@ using TUnit.Core;
 public sealed class DiagnosticInfrastructureTests
 {
     [Test]
-    public async Task Prefix_IsNe() => await Assert.That(DiagnosticIds.Prefix).IsEqualTo("NE");
+    public async Task Prefix_IsNe() => await Assert.That(DiagnosticIds.DiagnosticPrefix).IsEqualTo("NE");
 
     [Test]
     public async Task HelpLink_BuildsExpectedDocumentationUrl()

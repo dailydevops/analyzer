@@ -1,15 +1,20 @@
-namespace NetEvolve.Analyzer;
+﻿namespace NetEvolve.Analyzer;
 
 /// <summary>
 /// Central registry of every diagnostic identifier shipped by this package. Identifiers use the
-/// <see cref="Prefix">NE</see> prefix and are assigned sequentially; the owning
+/// <see cref="DiagnosticPrefix">NE</see> prefix and are assigned sequentially; the owning
 /// <see cref="DiagnosticCategories">category</see> is recorded on the descriptor and reflected by the
 /// folder the rule lives in.
 /// </summary>
 internal static class DiagnosticIds
 {
     /// <summary>The prefix shared by all NetEvolve diagnostic identifiers.</summary>
-    public const string Prefix = "NE";
+    public const string DiagnosticPrefix = "NE";
+
+    /// <summary>
+    /// The prefix shared by all NetEvolve diagnostic suppressor identifiers. Suppressors are a special kind of analyzer.
+    /// </summary>
+    public const string SuppressionPrefix = "NES";
 
     /// <summary>
     /// Diagnostic identifiers are registered here as rules are added, each as a
@@ -22,41 +27,50 @@ internal static class DiagnosticIds
     /// <summary>
     /// NE0001 — each file should declare a single top-level type whose name matches the file name.
     /// </summary>
-    public const string NE0001 = Prefix + "0001";
+    public const string NE0001 = DiagnosticPrefix + "0001";
 
     /// <summary>
     /// NE0002 — the declared namespace should match the folder structure, anchored at <c>RootNamespace</c>.
     /// </summary>
-    public const string NE0002 = Prefix + "0002";
+    public const string NE0002 = DiagnosticPrefix + "0002";
 
     /// <summary>
     /// NE0003 — a file should declare exactly one namespace.
     /// </summary>
-    public const string NE0003 = Prefix + "0003";
+    public const string NE0003 = DiagnosticPrefix + "0003";
 
     // Usage
 
     /// <summary>
     /// NE0004 — prefer the <c>is null</c> pattern over <c>== null</c> / <c>null ==</c>.
     /// </summary>
-    public const string NE0004 = Prefix + "0004";
+    public const string NE0004 = DiagnosticPrefix + "0004";
 
     /// <summary>
     /// NE0005 — prefer the <c>is not null</c> pattern over <c>!= null</c> / <c>null !=</c>.
     /// </summary>
-    public const string NE0005 = Prefix + "0005";
+    public const string NE0005 = DiagnosticPrefix + "0005";
 
     /// <summary>
     /// NE0006 — prefer the <c>is not null</c> pattern over an <c>is object</c> null check.
     /// </summary>
-    public const string NE0006 = Prefix + "0006";
+    public const string NE0006 = DiagnosticPrefix + "0006";
 
     // Documentation
 
     /// <summary>
     /// NE0007 — prefer <c>&lt;see langword="..."/&gt;</c> over <c>&lt;c&gt;...&lt;/c&gt;</c> for C# keywords.
     /// </summary>
-    public const string NE0007 = Prefix + "0007";
+    public const string NE0007 = DiagnosticPrefix + "0007";
+
+    // Suppressors
+
+    /// <summary>
+    /// NES0001 — suppresses Meziantou.Analyzer's <c>MA0154</c> ("Use langword in XML comment") wherever
+    /// NE0007 already reports the same location, avoiding a duplicate diagnostic when both analyzers run
+    /// against the same compilation.
+    /// </summary>
+    public const string NES0001 = SuppressionPrefix + "0001";
 
     /// <summary>Builds the documentation help link for a diagnostic identifier.</summary>
     /// <param name="diagnosticId">The diagnostic identifier, e.g. <c>NE0001</c>.</param>
