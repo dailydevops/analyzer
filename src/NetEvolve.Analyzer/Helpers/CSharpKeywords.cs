@@ -13,28 +13,27 @@ internal static class CSharpKeywords
 {
     /// <summary>
     /// Keywords that are reserved everywhere; an identifier with the same spelling requires the <c>@</c>
-    /// prefix (<c>@class</c>).
+    /// prefix (<c>@class</c>). Native type names (<c>bool</c>, <c>byte</c>, <c>char</c>, ...) are
+    /// intentionally excluded — referencing a type by its bare name in a doc comment is idiomatic and not
+    /// the keyword-in-<c>&lt;c&gt;</c> mistake this list exists to catch. <c>void</c> is kept, since it
+    /// denotes the absence of a return type rather than an actual type, and is commonly referenced the
+    /// same way as <see langword="true"/>/<see langword="false"/>/<see langword="null"/>.
     /// </summary>
     public static readonly ImmutableHashSet<string> ReservedKeywords = ImmutableHashSet.Create(
         StringComparer.Ordinal,
         "abstract",
         "as",
         "base",
-        "bool",
         "break",
-        "byte",
         "case",
         "catch",
-        "char",
         "checked",
         "class",
         "const",
         "continue",
-        "decimal",
         "default",
         "delegate",
         "do",
-        "double",
         "else",
         "enum",
         "event",
@@ -43,23 +42,19 @@ internal static class CSharpKeywords
         "false",
         "finally",
         "fixed",
-        "float",
         "for",
         "foreach",
         "goto",
         "if",
         "implicit",
         "in",
-        "int",
         "interface",
         "internal",
         "is",
         "lock",
-        "long",
         "namespace",
         "new",
         "null",
-        "object",
         "operator",
         "out",
         "override",
@@ -70,13 +65,10 @@ internal static class CSharpKeywords
         "readonly",
         "ref",
         "return",
-        "sbyte",
         "sealed",
-        "short",
         "sizeof",
         "stackalloc",
         "static",
-        "string",
         "struct",
         "switch",
         "this",
@@ -84,11 +76,8 @@ internal static class CSharpKeywords
         "true",
         "try",
         "typeof",
-        "uint",
-        "ulong",
         "unchecked",
         "unsafe",
-        "ushort",
         "using",
         "virtual",
         "void",
@@ -98,7 +87,9 @@ internal static class CSharpKeywords
 
     /// <summary>
     /// Keywords that carry special meaning only in specific syntactic contexts (query clauses, patterns,
-    /// declarations); the same spelling is a valid identifier everywhere else.
+    /// declarations); the same spelling is a valid identifier everywhere else. Native type names
+    /// (<c>nint</c>, <c>nuint</c>) are intentionally excluded for the same reason as in
+    /// <see cref="ReservedKeywords"/>.
     /// </summary>
     public static readonly ImmutableHashSet<string> ContextualKeywords = ImmutableHashSet.Create(
         StringComparer.Ordinal,
@@ -124,10 +115,8 @@ internal static class CSharpKeywords
         "let",
         "managed",
         "nameof",
-        "nint",
         "not",
         "notnull",
-        "nuint",
         "on",
         "or",
         "orderby",
