@@ -74,11 +74,7 @@ public sealed class UseLangwordAnalyzer : DiagnosticAnalyzer
 
     private static void AnalyzeElement(SyntaxTreeAnalysisContext context, XmlElementSyntax element)
     {
-        var elementName = element.StartTag.Name.LocalName.ValueText;
-        if (
-            !string.Equals(elementName, "c", StringComparison.Ordinal)
-            && !string.Equals(elementName, "code", StringComparison.Ordinal)
-        )
+        if (!IsCOrCodeElement(element))
         {
             return;
         }
@@ -89,15 +85,24 @@ public sealed class UseLangwordAnalyzer : DiagnosticAnalyzer
             return;
         }
 
+        var elementName = element.StartTag.Name.LocalName.ValueText;
         context.ReportDiagnostic(
             Diagnostic.Create(DiagnosticDescriptors.UseLangword, element.GetLocation(), keyword, elementName)
         );
     }
 
+    /// <summary>
+    /// Whether <paramref name="element"/> is a <c>&lt;c&gt;</c> or <c>&lt;code&gt;</c> element — the only
+    /// element kinds NE0007 (and, by extension, <see cref="UseLangwordSuppressor"/>) ever inspects.
+    /// </summary>
+    internal static bool IsCOrCodeElement(XmlElementSyntax element) =>
+        string.Equals(element.StartTag.Name.LocalName.ValueText, "c", StringComparison.Ordinal)
+        || string.Equals(element.StartTag.Name.LocalName.ValueText, "code", StringComparison.Ordinal);
+
     // Only a <c>/<code> element whose entire trimmed content is exactly one recognized keyword qualifies; a
     // code snippet, expression, or any surrounding prose (e.g. "<c>x == null</c>", "<c>the true value</c>") is
     // left alone because it is not a bare keyword reference.
-    private static string? GetSoleKeywordContent(XmlElementSyntax element)
+    internal static string? GetSoleKeywordContent(XmlElementSyntax element)
     {
         if (element.Content.Count != 1 || element.Content[0] is not XmlTextSyntax text)
         {

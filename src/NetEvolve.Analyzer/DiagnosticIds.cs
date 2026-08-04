@@ -58,6 +58,15 @@ internal static class DiagnosticIds
     /// </summary>
     public const string NE0007 = Prefix + "0007";
 
+    // Suppressors
+
+    /// <summary>
+    /// NES0001 — suppresses Meziantou.Analyzer's <c>MA0154</c> ("Use langword in XML comment") wherever
+    /// NE0007 already reports the same location, avoiding a duplicate diagnostic when both analyzers run
+    /// against the same compilation.
+    /// </summary>
+    public const string NES0001 = "NES0001";
+
     /// <summary>Builds the documentation help link for a diagnostic identifier.</summary>
     /// <param name="diagnosticId">The diagnostic identifier, e.g. <c>NE0001</c>.</param>
     /// <returns>An absolute URI pointing at the rule's documentation.</returns>
