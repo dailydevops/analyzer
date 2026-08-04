@@ -1,5 +1,6 @@
 namespace NetEvolve.Analyzer.Usage;
 
+using System.Collections.Generic;
 using System.Collections.Immutable;
 using System.Composition;
 using System.Linq;
@@ -14,13 +15,18 @@ using Microsoft.CodeAnalysis.CSharp.Syntax;
 /// <summary>
 /// Code fix for <see cref="RequireCancellationTokenParameterAnalyzer">NE0010</see>. Appends
 /// <c>CancellationToken cancellationToken = default</c> as the last parameter of the flagged method, adding
-/// a <c>using System.Threading;</c> directive when the file does not already have one in scope.
+/// a <c>using System.Threading;</c> directive when the file does not already have one in scope, and — on a
+/// best-effort basis — passes the new token through to call sites within the method's own body that either
+/// already have an unfilled trailing <c>CancellationToken</c> slot or have exactly one sibling overload adding
+/// one. Nested lambdas and local functions are left alone: their own cancellation handling is out of this
+/// fix's scope.
 /// </summary>
 [ExportCodeFixProvider(LanguageNames.CSharp, Name = nameof(RequireCancellationTokenParameterCodeFixProvider))]
 [Shared]
 public sealed class RequireCancellationTokenParameterCodeFixProvider : CodeFixProvider
 {
     private const string SystemThreadingNamespace = "System.Threading";
+    private const string ParameterName = "cancellationToken";
 
     /// <inheritdoc />
     public override ImmutableArray<string> FixableDiagnosticIds { get; } = ImmutableArray.Create(DiagnosticIds.NE0010);
@@ -63,20 +69,157 @@ public sealed class RequireCancellationTokenParameterCodeFixProvider : CodeFixPr
             .OfType<MethodDeclarationSyntax>()
             .First();
 
+        var semanticModel = await document.GetSemanticModelAsync(cancellationToken).ConfigureAwait(false);
+        var methodWithPropagatedCalls = semanticModel is null
+            ? currentMethod
+            : PropagateToCallSites(semanticModel, currentMethod);
+
         var parameter = SyntaxFactory
-            .Parameter(SyntaxFactory.Identifier("cancellationToken"))
+            .Parameter(SyntaxFactory.Identifier(ParameterName))
             .WithType(SyntaxFactory.IdentifierName("CancellationToken").WithTrailingTrivia(SyntaxFactory.Space))
             .WithDefault(
                 SyntaxFactory.EqualsValueClause(SyntaxFactory.LiteralExpression(SyntaxKind.DefaultLiteralExpression))
             );
 
-        var updatedMethod = currentMethod.AddParameterListParameters(parameter);
+        var updatedMethod = methodWithPropagatedCalls.AddParameterListParameters(parameter);
 
         var newRoot = root.ReplaceNode(currentMethod, updatedMethod);
         newRoot = EnsureSystemThreadingUsing(newRoot);
 
         return document.WithSyntaxRoot(newRoot);
     }
+
+    // Passes the new token through to call sites within the method's own body/expression-body that can accept
+    // it without changing which overload is chosen out from under the caller (see IsAppendableCall). Nested
+    // lambdas and local functions are skipped — capturing the outer parameter there would be legal, but
+    // whether it's *wanted* is a judgment call this mechanical fix doesn't make.
+    private static MethodDeclarationSyntax PropagateToCallSites(
+        SemanticModel semanticModel,
+        MethodDeclarationSyntax method
+    )
+    {
+        var candidates = CollectAppendableInvocations(semanticModel, method);
+        if (candidates.Count == 0)
+        {
+            return method;
+        }
+
+        return method.ReplaceNodes(
+            candidates,
+            (originalInvocation, _) =>
+                originalInvocation.AddArgumentListArguments(
+                    SyntaxFactory.Argument(SyntaxFactory.IdentifierName(ParameterName))
+                )
+        );
+    }
+
+    private static List<InvocationExpressionSyntax> CollectAppendableInvocations(
+        SemanticModel semanticModel,
+        MethodDeclarationSyntax method
+    )
+    {
+        SyntaxNode? searchRoot = method.Body is not null ? method.Body : method.ExpressionBody?.Expression;
+        if (searchRoot is null)
+        {
+            return [];
+        }
+
+        return searchRoot
+            .DescendantNodesAndSelf(descendIntoChildren: IsNotNestedFunctionScope)
+            .OfType<InvocationExpressionSyntax>()
+            .Where(invocation => IsAppendableCall(semanticModel, invocation))
+            .ToList();
+    }
+
+    // Stops descent at a nested lambda/anonymous method/local function: a call inside one of those belongs to
+    // a different (potentially already cancellation-aware) scope, not the enclosing method being fixed here.
+    private static bool IsNotNestedFunctionScope(SyntaxNode node) =>
+        node is not AnonymousFunctionExpressionSyntax && node is not LocalFunctionStatementSyntax;
+
+    // Whether appending a 'cancellationToken' argument to 'invocation' is safe: either the resolved method
+    // already ends with an unfilled CancellationToken parameter, or there is exactly one sibling overload that
+    // adds one as its trailing parameter and every currently supplied argument would still line up
+    // positionally. Named, ref, and out arguments are left alone entirely to keep this analysis simple.
+    private static bool IsAppendableCall(SemanticModel semanticModel, InvocationExpressionSyntax invocation)
+    {
+        var arguments = invocation.ArgumentList.Arguments;
+        if (
+            arguments.Any(argument =>
+                argument.NameColon is not null || !argument.RefKindKeyword.IsKind(SyntaxKind.None)
+            )
+        )
+        {
+            return false;
+        }
+
+        if (semanticModel.GetSymbolInfo(invocation).Symbol is not IMethodSymbol invokedMethod)
+        {
+            return false;
+        }
+
+        if (arguments.Any(argument => IsCancellationToken(semanticModel.GetTypeInfo(argument.Expression).Type)))
+        {
+            // Already passing a token explicitly somewhere in the call.
+            return false;
+        }
+
+        var parameters = invokedMethod.Parameters;
+        var suppliedCount = arguments.Count;
+
+        if (
+            parameters.Length > 0
+            && IsCancellationToken(parameters[parameters.Length - 1].Type)
+            && suppliedCount == parameters.Length - 1
+        )
+        {
+            return true;
+        }
+
+        if (parameters.Any(parameter => IsCancellationToken(parameter.Type)) || suppliedCount != parameters.Length)
+        {
+            return false;
+        }
+
+        var containingType = invokedMethod.ContainingType;
+        if (containingType is null)
+        {
+            return false;
+        }
+
+        var matchingOverloads = containingType
+            .GetMembers(invokedMethod.Name)
+            .OfType<IMethodSymbol>()
+            .Where(candidate => !SymbolEqualityComparer.Default.Equals(candidate, invokedMethod))
+            .Where(candidate => candidate.Parameters.Length == parameters.Length + 1)
+            .Where(candidate =>
+                candidate.Parameters.Length > 0
+                && IsCancellationToken(candidate.Parameters[candidate.Parameters.Length - 1].Type)
+            )
+            .Where(candidate => LeadingParameterTypesMatch(candidate.Parameters, parameters))
+            .Take(2)
+            .ToList();
+
+        return matchingOverloads.Count == 1;
+    }
+
+    private static bool LeadingParameterTypesMatch(
+        ImmutableArray<IParameterSymbol> longer,
+        ImmutableArray<IParameterSymbol> shorter
+    )
+    {
+        for (var index = 0; index < shorter.Length; index++)
+        {
+            if (!SymbolEqualityComparer.Default.Equals(longer[index].Type, shorter[index].Type))
+            {
+                return false;
+            }
+        }
+
+        return true;
+    }
+
+    private static bool IsCancellationToken(ITypeSymbol? type) =>
+        type is { Name: "CancellationToken", ContainingNamespace.Name: "Threading" };
 
     private static CompilationUnitSyntax EnsureSystemThreadingUsing(CompilationUnitSyntax root)
     {
