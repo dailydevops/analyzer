@@ -11,7 +11,9 @@ internal abstract class NetEvolveSuppressorBase : DiagnosticSuppressor
 {
     public override void ReportSuppressions(SuppressionAnalysisContext context)
     {
-        var diagnosticsIds = SupportedSuppressions.Select(s => s.SuppressedDiagnosticId).ToImmutableHashSet();
+        var diagnosticsIds = SupportedSuppressions
+            .Select(s => s.SuppressedDiagnosticId)
+            .ToImmutableHashSet(StringComparer.Ordinal);
         var diagnosticsToSuppress = context.ReportedDiagnostics.Where(d =>
             diagnosticsIds.Contains(d.Id) && ShouldSuppress(d, context.CancellationToken)
         );
