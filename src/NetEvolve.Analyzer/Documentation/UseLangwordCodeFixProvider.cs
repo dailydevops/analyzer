@@ -12,8 +12,9 @@ using Microsoft.CodeAnalysis.CSharp.Syntax;
 using Microsoft.CodeAnalysis.Text;
 
 /// <summary>
-/// Code fix for <see cref="UseLangwordAnalyzer">NE0007</see>. Replaces a <c>&lt;c&gt;keyword&lt;/c&gt;</c>
-/// element with <c>&lt;see langword="keyword"/&gt;</c>. The rewrite is applied as a plain text-span edit
+/// Code fix for <see cref="UseLangwordAnalyzer">NE0007</see>. Replaces a <c>&lt;c&gt;keyword&lt;/c&gt;</c> or
+/// <c>&lt;code&gt;keyword&lt;/code&gt;</c> element with <c>&lt;see langword="keyword"/&gt;</c>. The rewrite is
+/// applied as a plain text-span edit
 /// rather than a syntax-node replace, because replacing a node nested in structured (doc comment) trivia makes
 /// Roslyn re-serialize the enclosing trivia and can normalize an unrelated line ending elsewhere in the file
 /// to the platform default.

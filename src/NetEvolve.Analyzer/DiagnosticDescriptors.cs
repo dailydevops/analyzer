@@ -91,18 +91,21 @@ internal static class DiagnosticDescriptors
         helpLinkUri: DiagnosticIds.HelpLink(DiagnosticIds.NE0006)
     );
 
-    /// <summary>NE0007 — prefer <c>&lt;see langword="..."/&gt;</c> over <c>&lt;c&gt;...&lt;/c&gt;</c> for C# keywords.</summary>
+    /// <summary>
+    /// NE0007 — prefer <c>&lt;see langword="..."/&gt;</c> over <c>&lt;c&gt;...&lt;/c&gt;</c> or
+    /// <c>&lt;code&gt;...&lt;/code&gt;</c> for C# keywords.
+    /// </summary>
     public static readonly DiagnosticDescriptor UseLangword = new(
         id: DiagnosticIds.NE0007,
-        title: "Use <see langword=\"...\"/> instead of <c>...</c> for C# keywords",
-        messageFormat: "Use <see langword=\"{0}\"/> instead of <c>{0}</c>",
+        title: "Use <see langword=\"...\"/> instead of <c>...</c> or <code>...</code> for C# keywords",
+        messageFormat: "Use <see langword=\"{0}\"/> instead of <{1}>{0}</{1}>",
         category: DiagnosticCategories.Documentation,
         defaultSeverity: DiagnosticSeverity.Warning,
         isEnabledByDefault: true,
-        description: "A <c> element whose entire content is a single C# keyword (e.g. 'true', 'false', "
-            + "'null') carries no semantic meaning; <see langword=\"...\"/> is the dedicated construct for "
-            + "referencing a language keyword and is what IntelliSense and documentation generators recognize "
-            + "as such.",
+        description: "A <c> or <code> element whose entire content is a single C# keyword (e.g. 'true', "
+            + "'false', 'null') carries no semantic meaning; <see langword=\"...\"/> is the dedicated construct "
+            + "for referencing a language keyword and is what IntelliSense and documentation generators "
+            + "recognize as such.",
         helpLinkUri: DiagnosticIds.HelpLink(DiagnosticIds.NE0007)
     );
 }

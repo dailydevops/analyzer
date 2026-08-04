@@ -58,6 +58,24 @@ public sealed class UseLangwordAnalyzerTests
     }
 
     [Test]
+    public async Task BareKeywordInCodeElement_ReportsNe0007()
+    {
+        const string source = """
+            public sealed class Sample
+            {
+                /// <summary>Returns <code>true</code> on success.</summary>
+                public bool Succeeded() => true;
+            }
+            """;
+
+        var diagnostics = await AnalyzerCompiler
+            .GetAnalyzerDiagnosticsAsync(source, new UseLangwordAnalyzer())
+            .ConfigureAwait(false);
+
+        await Assert.That(diagnostics.Count(IsNe0007)).IsEqualTo(1);
+    }
+
+    [Test]
     public async Task ExpressionInsideC_ReportsNothing()
     {
         const string source = """
