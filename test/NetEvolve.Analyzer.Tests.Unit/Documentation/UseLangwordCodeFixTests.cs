@@ -68,6 +68,25 @@ public sealed class UseLangwordCodeFixTests
         );
 
     [Test]
+    public Task CodeKeyword_RewrittenToLangword() =>
+        CSharpCodeFixVerifier<UseLangwordAnalyzer, UseLangwordCodeFixProvider>.VerifyCodeFixAsync(
+            """
+            public sealed class Sample
+            {
+                /// <summary>Returns {|NE0007:<code>true</code>|} on success.</summary>
+                public bool Succeeded() => true;
+            }
+            """,
+            """
+            public sealed class Sample
+            {
+                /// <summary>Returns <see langword="true"/> on success.</summary>
+                public bool Succeeded() => true;
+            }
+            """
+        );
+
+    [Test]
     public Task MultipleOccurrences_FixAllRewritesEveryOccurrence() =>
         CSharpCodeFixVerifier<UseLangwordAnalyzer, UseLangwordCodeFixProvider>.VerifyCodeFixAsync(
             """

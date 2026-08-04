@@ -94,6 +94,20 @@ public sealed class UseLangwordAnalyzerTests
             """
         );
 
+    // ---- Positive: <code> is recognized just like <c> ------------------------------------------------------
+
+    [Test]
+    public Task InCodeElement_Reports() =>
+        CSharpAnalyzerVerifier<UseLangwordAnalyzer>.VerifyAnalyzerAsync(
+            """
+            public sealed class Sample
+            {
+                /// <summary>Returns {|NE0007:<code>true</code>|} on success.</summary>
+                public bool Succeeded() => true;
+            }
+            """
+        );
+
     // ---- Negative: a <c> containing more than the bare keyword is left alone ----------------------------
 
     [Test]
