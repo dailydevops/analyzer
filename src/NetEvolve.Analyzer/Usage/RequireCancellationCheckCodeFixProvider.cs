@@ -11,6 +11,7 @@ using Microsoft.CodeAnalysis.CodeActions;
 using Microsoft.CodeAnalysis.CodeFixes;
 using Microsoft.CodeAnalysis.CSharp;
 using Microsoft.CodeAnalysis.CSharp.Syntax;
+using NetEvolve.Analyzer.Helpers;
 
 /// <summary>
 /// Code fix for <see cref="RequireCancellationCheckAnalyzer">NE0009</see>. Offers two independent fixes at the
@@ -58,7 +59,7 @@ public sealed class RequireCancellationCheckCodeFixProvider : CodeFixProvider
                         context.Document,
                         method,
                         tokenName,
-                        BuildThrowIfCancellationRequestedText,
+                        BuildThrowIfCancellationRequestedTextAsync,
                         cancellationToken
                     ),
                 equivalenceKey: ThrowIfCancellationRequestedKey
@@ -74,7 +75,7 @@ public sealed class RequireCancellationCheckCodeFixProvider : CodeFixProvider
                         context.Document,
                         method,
                         tokenName,
-                        BuildIsCancellationRequestedText,
+                        BuildIsCancellationRequestedTextAsync,
                         cancellationToken
                     ),
                 equivalenceKey: IsCancellationRequestedKey
@@ -87,7 +88,7 @@ public sealed class RequireCancellationCheckCodeFixProvider : CodeFixProvider
         Document document,
         MethodDeclarationSyntax method,
         string tokenName,
-        Func<MethodDeclarationSyntax, string, string, string> buildStatementText,
+        Func<Document, MethodDeclarationSyntax, string, string, CancellationToken, Task<string>> buildStatementText,
         CancellationToken cancellationToken
     )
     {
@@ -99,7 +100,8 @@ public sealed class RequireCancellationCheckCodeFixProvider : CodeFixProvider
         var guardCount = CountLeadingGuardClauses(statements);
         var indentation = GetIndentation(current, statements, guardCount);
 
-        var statementText = buildStatementText(current, tokenName, indentation);
+        var statementText = await buildStatementText(document, current, tokenName, indentation, cancellationToken)
+            .ConfigureAwait(false);
         var checkStatement = SyntaxFactory
             .ParseStatement(statementText)
             .WithLeadingTrivia(SyntaxFactory.Whitespace(indentation));
@@ -198,27 +200,77 @@ public sealed class RequireCancellationCheckCodeFixProvider : CodeFixProvider
             )
             ?.Identifier.ValueText;
 
-    private static string BuildThrowIfCancellationRequestedText(
-        MethodDeclarationSyntax _,
+    private static Task<string> BuildThrowIfCancellationRequestedTextAsync(
+        Document _,
+        MethodDeclarationSyntax _1,
         string tokenName,
-        string _1
-    ) => $"{tokenName}.ThrowIfCancellationRequested();\n";
+        string _2,
+        CancellationToken _3
+    ) => Task.FromResult($"{tokenName}.ThrowIfCancellationRequested();\n");
 
-    private static string BuildIsCancellationRequestedText(
+    private static async Task<string> BuildIsCancellationRequestedTextAsync(
+        Document document,
         MethodDeclarationSyntax method,
         string tokenName,
-        string indentation
+        string indentation,
+        CancellationToken cancellationToken
     )
     {
-        var returnText = GetReturnStatementText(method);
+        var returnText = await GetReturnStatementTextAsync(document, method, cancellationToken).ConfigureAwait(false);
         return $"if ({tokenName}.IsCancellationRequested)\n{indentation}{{\n{indentation}    {returnText}\n{indentation}}}\n";
     }
 
-    // 'return;' is legal for a void-returning method, and also for an async method returning (non-generic)
-    // Task or ValueTask; everywhere else (a real T, or a non-async Task<T>/ValueTask<T>/T) 'return default;' is
-    // always syntactically legal, even where it is only a semantic placeholder.
-    private static string GetReturnStatementText(MethodDeclarationSyntax method)
+    // The well-known generic collection shapes a C# 12 collection expression ('[]') can legally target: BCL
+    // list/set/queue/stack interfaces and implementations, their System.Collections.Immutable counterparts, and
+    // Span<T>/ReadOnlySpan<T>. Array types are handled separately (any element type, any rank). This is a
+    // pragmatic subset, not the full collection-expression conversion spec (custom [CollectionBuilder] types are
+    // not recognized), but covers what a guard-clause return is realistically going to need.
+    private static readonly ImmutableHashSet<(string Namespace, string Name)> CollectionExpressionTargetTypes =
+        ImmutableHashSet.Create(
+            ("System.Collections.Generic", "List"),
+            ("System.Collections.Generic", "IList"),
+            ("System.Collections.Generic", "ICollection"),
+            ("System.Collections.Generic", "IEnumerable"),
+            ("System.Collections.Generic", "IReadOnlyList"),
+            ("System.Collections.Generic", "IReadOnlyCollection"),
+            ("System.Collections.Generic", "ISet"),
+            ("System.Collections.Generic", "HashSet"),
+            ("System.Collections.Generic", "SortedSet"),
+            ("System.Collections.Generic", "Stack"),
+            ("System.Collections.Generic", "Queue"),
+            ("System.Collections.Immutable", "ImmutableArray"),
+            ("System.Collections.Immutable", "ImmutableList"),
+            ("System.Collections.Immutable", "IImmutableList"),
+            ("System.Collections.Immutable", "ImmutableHashSet"),
+            ("System.Collections.Immutable", "IImmutableSet"),
+            ("System.Collections.Immutable", "ImmutableSortedSet"),
+            ("System.Collections.Immutable", "ImmutableQueue"),
+            ("System.Collections.Immutable", "IImmutableQueue"),
+            ("System.Collections.Immutable", "ImmutableStack"),
+            ("System.Collections.Immutable", "IImmutableStack"),
+            ("System", "Span"),
+            ("System", "ReadOnlySpan")
+        );
+
+    // 'yield break;' is required (and the only legal early-exit) in an iterator method — 'return value;' does
+    // not compile there at all, regardless of return type. 'return;' is legal for a void-returning method, and
+    // also for an async method returning (non-generic) Task or ValueTask. For a real T, an async method
+    // returning Task<T>/ValueTask<T>, a plain synchronous collection-returning method, or a non-async
+    // Task<T>/ValueTask<T> (where the statement's target type is Task<T> itself, not T) a collection-expression
+    // 'return [];' is used when the target type is one of the well-known collection shapes above and the
+    // project's language version supports collection expressions (C# 12); otherwise 'return default;' is the
+    // universal fallback — always syntactically legal, even where it is only a semantic placeholder.
+    private static async Task<string> GetReturnStatementTextAsync(
+        Document document,
+        MethodDeclarationSyntax method,
+        CancellationToken cancellationToken
+    )
     {
+        if (IsIteratorMethod(method))
+        {
+            return "yield break;";
+        }
+
         if (method.ReturnType is PredefinedTypeSyntax { Keyword.RawKind: (int)SyntaxKind.VoidKeyword })
         {
             return "return;";
@@ -230,6 +282,60 @@ public sealed class RequireCancellationCheckCodeFixProvider : CodeFixProvider
             return "return;";
         }
 
+        // LanguageVersion.CSharp12 doesn't exist on the older Microsoft.CodeAnalysis.CSharp package versions this
+        // analyzer also builds against (Roslyn 4.4/4.7 predate C# 12); the enum's underlying values are stable
+        // API surface across versions, so referencing it by value keeps this compiling on all four variants.
+        if (LanguageVersionGate.Supports(document, (LanguageVersion)1200))
+        {
+            var semanticModel = await document.GetSemanticModelAsync(cancellationToken).ConfigureAwait(false);
+            var methodSymbol = semanticModel?.GetDeclaredSymbol(method, cancellationToken);
+
+            if (
+                methodSymbol is not null
+                && IsCollectionExpressionCompatible(GetReturnTargetType(methodSymbol, isAsync))
+            )
+            {
+                return "return [];";
+            }
+        }
+
         return "return default;";
     }
+
+    // The type a 'return X;' statement's X must have: for an async method returning Task<T>/ValueTask<T>, the
+    // compiler unwraps to T; everywhere else (including a non-async Task<T>/ValueTask<T>, where X must itself
+    // be a Task<T>/ValueTask<T>) the declared return type is exactly what X must be.
+    private static ITypeSymbol GetReturnTargetType(IMethodSymbol methodSymbol, bool isAsync)
+    {
+        if (
+            isAsync
+            && methodSymbol.ReturnType
+                is INamedTypeSymbol { Name: "Task" or "ValueTask", TypeArguments.Length: 1 } taskType
+        )
+        {
+            return taskType.TypeArguments[0];
+        }
+
+        return methodSymbol.ReturnType;
+    }
+
+    private static bool IsCollectionExpressionCompatible(ITypeSymbol? type) =>
+        type switch
+        {
+            IArrayTypeSymbol => true,
+            INamedTypeSymbol { Arity: 1 } named => CollectionExpressionTargetTypes.Contains(
+                (named.ContainingNamespace.ToDisplayString(), named.Name)
+            ),
+            _ => false,
+        };
+
+    // Whether 'method' is (or contains, at its own nesting level) an iterator — i.e. already uses 'yield
+    // return'/'yield break' somewhere in its body. Descent stops at a nested local function, since a local
+    // function's own 'yield' makes only that local function an iterator, not the enclosing method.
+    private static bool IsIteratorMethod(MethodDeclarationSyntax method) =>
+        method.Body is not null
+        && method
+            .Body.DescendantNodes(descendIntoChildren: node => node is not LocalFunctionStatementSyntax)
+            .OfType<YieldStatementSyntax>()
+            .Any();
 }

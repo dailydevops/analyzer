@@ -26,6 +26,13 @@
     <_RoslynApiVersion Condition=" '$(TargetFramework)' == 'net10.0' ">5.6.*</_RoslynApiVersion>
   </PropertyGroup>
 
+  <PropertyGroup
+    Label="Only the Microsoft.CodeAnalysis.CSharp versions referenced by net9.0/net10.0 above (4.14/5.6) know about C# 12 collection expressions; 4.4/4.7 (every other target framework) predate the feature entirely."
+    Condition=" '$(TargetFramework)' == 'net9.0' OR '$(TargetFramework)' == 'net10.0' "
+  >
+    <DefineConstants>$(DefineConstants);SUPPORTS_COLLECTION_EXPRESSIONS</DefineConstants>
+  </PropertyGroup>
+
   <ItemGroup>
     <PackageReference Include="TUnit" />
     <!-- Backports ModuleInitializerAttribute, NotNullWhenAttribute, and friends onto net472/net48/net481

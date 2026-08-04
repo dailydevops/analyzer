@@ -3,6 +3,7 @@ namespace NetEvolve.Analyzer.Tests.Unit.Usage;
 using System.Threading;
 using System.Threading.Tasks;
 using Microsoft.CodeAnalysis.CodeFixes;
+using Microsoft.CodeAnalysis.CSharp;
 using Microsoft.CodeAnalysis.CSharp.Testing;
 using Microsoft.CodeAnalysis.Diagnostics;
 using Microsoft.CodeAnalysis.Testing;
@@ -19,10 +20,23 @@ internal static class RequireCancellationCheckCodeFixVerifier<TAnalyzer, TCodeFi
     where TCodeFix : CodeFixProvider, new()
 {
     /// <summary>Applies the code action identified by <paramref name="codeActionEquivalenceKey"/> and asserts the result.</summary>
+    public static Task VerifyCodeFixAsync(
+        string source,
+        string fixedSource,
+        string codeActionEquivalenceKey,
+        params DiagnosticResult[] expected
+    ) => VerifyCodeFixAsync(source, fixedSource, codeActionEquivalenceKey, languageVersion: null, expected);
+
+    /// <summary>
+    /// Applies the code action identified by <paramref name="codeActionEquivalenceKey"/> at the given
+    /// <paramref name="languageVersion"/> (or the project's default, if <see langword="null"/>) and asserts the
+    /// result.
+    /// </summary>
     public static async Task VerifyCodeFixAsync(
         string source,
         string fixedSource,
         string codeActionEquivalenceKey,
+        LanguageVersion? languageVersion,
         params DiagnosticResult[] expected
     )
     {
@@ -33,6 +47,17 @@ internal static class RequireCancellationCheckCodeFixVerifier<TAnalyzer, TCodeFi
             ReferenceAssemblies = ReferenceAssemblies.Net.Net80,
             CodeActionEquivalenceKey = codeActionEquivalenceKey,
         };
+
+        if (languageVersion is { } version)
+        {
+            test.SolutionTransforms.Add(
+                (solution, projectId) =>
+                {
+                    var parseOptions = (CSharpParseOptions)solution.GetProject(projectId)!.ParseOptions!;
+                    return solution.WithProjectParseOptions(projectId, parseOptions.WithLanguageVersion(version));
+                }
+            );
+        }
 
         test.ExpectedDiagnostics.AddRange(expected);
 

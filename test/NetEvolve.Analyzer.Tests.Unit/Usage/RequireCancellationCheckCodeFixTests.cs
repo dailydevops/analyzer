@@ -1,6 +1,7 @@
 namespace NetEvolve.Analyzer.Tests.Unit.Usage;
 
 using System.Threading.Tasks;
+using Microsoft.CodeAnalysis.CSharp;
 using NetEvolve.Analyzer.Usage;
 using TUnit.Core;
 
@@ -201,6 +202,252 @@ public sealed class RequireCancellationCheckCodeFixTests
                         return default;
                     }
                     return 42;
+                }
+            }
+            """,
+            IsCancellationRequestedKey
+        );
+
+    // ---- IsCancellationRequested + return form: collection-returning methods -----------------------------
+    //
+    // Only the Microsoft.CodeAnalysis.CSharp package versions this test project references for net9.0/net10.0
+    // (4.14/5.6) know about C# 12 collection expressions at all; net8.0 (4.7) and every other target framework
+    // (4.4, the default) predate the feature and cannot even represent LanguageVersion.CSharp12 as a value, let
+    // alone parse "return [];" — so these three positive cases only compile/run where the feature actually
+    // exists. The fallback path (below C# 12) is covered unconditionally further down.
+
+#if SUPPORTS_COLLECTION_EXPRESSIONS
+    [Test]
+    public Task ListReturningMethod_AddsIsCancellationRequestedWithReturnEmptyCollection() =>
+        RequireCancellationCheckCodeFixVerifier<
+            RequireCancellationCheckAnalyzer,
+            RequireCancellationCheckCodeFixProvider
+        >.VerifyCodeFixAsync(
+            """
+            using System.Collections.Generic;
+            using System.Threading;
+
+            public sealed class Sample
+            {
+                public List<int> {|NE0009:Compute|}(CancellationToken cancellationToken)
+                {
+                    return new List<int> { 42 };
+                }
+            }
+            """,
+            """
+            using System.Collections.Generic;
+            using System.Threading;
+
+            public sealed class Sample
+            {
+                public List<int> Compute(CancellationToken cancellationToken)
+                {
+                    if (cancellationToken.IsCancellationRequested)
+                    {
+                        return [];
+                    }
+                    return new List<int> { 42 };
+                }
+            }
+            """,
+            IsCancellationRequestedKey,
+            LanguageVersion.CSharp12
+        );
+
+    [Test]
+    public Task ArrayReturningMethod_AddsIsCancellationRequestedWithReturnEmptyCollection() =>
+        RequireCancellationCheckCodeFixVerifier<
+            RequireCancellationCheckAnalyzer,
+            RequireCancellationCheckCodeFixProvider
+        >.VerifyCodeFixAsync(
+            """
+            using System.Threading;
+
+            public sealed class Sample
+            {
+                public int[] {|NE0009:Compute|}(CancellationToken cancellationToken)
+                {
+                    return new[] { 42 };
+                }
+            }
+            """,
+            """
+            using System.Threading;
+
+            public sealed class Sample
+            {
+                public int[] Compute(CancellationToken cancellationToken)
+                {
+                    if (cancellationToken.IsCancellationRequested)
+                    {
+                        return [];
+                    }
+                    return new[] { 42 };
+                }
+            }
+            """,
+            IsCancellationRequestedKey,
+            LanguageVersion.CSharp12
+        );
+
+    [Test]
+    public Task AsyncTaskOfListMethod_AddsIsCancellationRequestedWithReturnEmptyCollection() =>
+        RequireCancellationCheckCodeFixVerifier<
+            RequireCancellationCheckAnalyzer,
+            RequireCancellationCheckCodeFixProvider
+        >.VerifyCodeFixAsync(
+            """
+            using System.Collections.Generic;
+            using System.Threading;
+            using System.Threading.Tasks;
+
+            public sealed class Sample
+            {
+                public async Task<List<int>> {|NE0009:ComputeAsync|}(CancellationToken cancellationToken)
+                {
+                    return await LoadAsync().ConfigureAwait(false);
+                }
+
+                private static Task<List<int>> LoadAsync() => Task.FromResult(new List<int>());
+            }
+            """,
+            """
+            using System.Collections.Generic;
+            using System.Threading;
+            using System.Threading.Tasks;
+
+            public sealed class Sample
+            {
+                public async Task<List<int>> ComputeAsync(CancellationToken cancellationToken)
+                {
+                    if (cancellationToken.IsCancellationRequested)
+                    {
+                        return [];
+                    }
+                    return await LoadAsync().ConfigureAwait(false);
+                }
+
+                private static Task<List<int>> LoadAsync() => Task.FromResult(new List<int>());
+            }
+            """,
+            IsCancellationRequestedKey,
+            LanguageVersion.CSharp12
+        );
+#endif
+
+    [Test]
+    public Task ListReturningMethod_BelowCSharp12_AddsIsCancellationRequestedWithReturnDefault() =>
+        RequireCancellationCheckCodeFixVerifier<
+            RequireCancellationCheckAnalyzer,
+            RequireCancellationCheckCodeFixProvider
+        >.VerifyCodeFixAsync(
+            """
+            using System.Collections.Generic;
+            using System.Threading;
+
+            public sealed class Sample
+            {
+                public List<int> {|NE0009:Compute|}(CancellationToken cancellationToken)
+                {
+                    return new List<int> { 42 };
+                }
+            }
+            """,
+            """
+            using System.Collections.Generic;
+            using System.Threading;
+
+            public sealed class Sample
+            {
+                public List<int> Compute(CancellationToken cancellationToken)
+                {
+                    if (cancellationToken.IsCancellationRequested)
+                    {
+                        return default;
+                    }
+                    return new List<int> { 42 };
+                }
+            }
+            """,
+            IsCancellationRequestedKey,
+            LanguageVersion.CSharp11
+        );
+
+    [Test]
+    public Task AsyncEnumerableReturningMethod_WithoutYield_AddsIsCancellationRequestedWithReturnDefault() =>
+        RequireCancellationCheckCodeFixVerifier<
+            RequireCancellationCheckAnalyzer,
+            RequireCancellationCheckCodeFixProvider
+        >.VerifyCodeFixAsync(
+            """
+            using System.Collections.Generic;
+            using System.Threading;
+
+            public sealed class Sample
+            {
+                public IAsyncEnumerable<int> {|NE0009:Compute|}(CancellationToken cancellationToken)
+                {
+                    return Factory();
+                }
+
+                private static IAsyncEnumerable<int> Factory() => null!;
+            }
+            """,
+            """
+            using System.Collections.Generic;
+            using System.Threading;
+
+            public sealed class Sample
+            {
+                public IAsyncEnumerable<int> Compute(CancellationToken cancellationToken)
+                {
+                    if (cancellationToken.IsCancellationRequested)
+                    {
+                        return default;
+                    }
+                    return Factory();
+                }
+
+                private static IAsyncEnumerable<int> Factory() => null!;
+            }
+            """,
+            IsCancellationRequestedKey
+        );
+
+    // ---- IsCancellationRequested form: iterator methods must use 'yield break;' ---------------------------
+
+    [Test]
+    public Task IteratorMethod_AddsIsCancellationRequestedWithYieldBreak() =>
+        RequireCancellationCheckCodeFixVerifier<
+            RequireCancellationCheckAnalyzer,
+            RequireCancellationCheckCodeFixProvider
+        >.VerifyCodeFixAsync(
+            """
+            using System.Collections.Generic;
+            using System.Threading;
+
+            public sealed class Sample
+            {
+                public IEnumerable<int> {|NE0009:Compute|}(CancellationToken cancellationToken)
+                {
+                    yield return 42;
+                }
+            }
+            """,
+            """
+            using System.Collections.Generic;
+            using System.Threading;
+
+            public sealed class Sample
+            {
+                public IEnumerable<int> Compute(CancellationToken cancellationToken)
+                {
+                    if (cancellationToken.IsCancellationRequested)
+                    {
+                        yield break;
+                    }
+                    yield return 42;
                 }
             }
             """,

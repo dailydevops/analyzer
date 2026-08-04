@@ -12,7 +12,8 @@ using Microsoft.CodeAnalysis.Diagnostics;
 /// NE0009 — reports a method with a block body that accepts a <see cref="System.Threading.CancellationToken"/>
 /// parameter but does not check for cancellation as the first statement of its body (immediately after any
 /// leading argument-validation guard clauses). Either <c>token.ThrowIfCancellationRequested()</c> or
-/// <c>if (token.IsCancellationRequested) { return ...; }</c> satisfies the rule. Expression-bodied methods are
+/// <c>if (token.IsCancellationRequested) { return ...; }</c> (or, inside an iterator method,
+/// <c>if (token.IsCancellationRequested) { yield break; }</c>) satisfies the rule. Expression-bodied methods are
 /// skipped, since they cannot structurally hold a guard statement; methods without a body (interface members,
 /// abstract, extern, or partial declarations without an implementation) are skipped as well, since there is no
 /// body to check. Only <see cref="MethodDeclarationSyntax"/> is inspected; local functions are not.
@@ -237,7 +238,13 @@ public sealed class RequireCancellationCheckAnalyzer : DiagnosticAnalyzer
         return ifStatement.Statement switch
         {
             ReturnStatementSyntax => true,
-            BlockSyntax { Statements.Count: 1 } block => block.Statements[0] is ReturnStatementSyntax,
+            // 'yield break;' (a YieldStatementSyntax with no Expression) is the only legal early-exit inside an
+            // iterator method — 'return value;' does not compile there — so it satisfies the check just as a
+            // plain 'return' does. 'yield return ...;' does not exit the method and does not count.
+            YieldStatementSyntax { Expression: null } => true,
+            BlockSyntax { Statements.Count: 1 } block => block.Statements[0]
+                is ReturnStatementSyntax
+                    or YieldStatementSyntax { Expression: null },
             _ => false,
         };
     }
