@@ -125,6 +125,7 @@ description, fix guidance, and configuration options.
 | [NE0005](https://github.com/dailydevops/analyzer/blob/main/docs/rules/NE0005.md) | Usage | Use the `is not null` pattern instead of `!= null` | Yes |
 | [NE0006](https://github.com/dailydevops/analyzer/blob/main/docs/rules/NE0006.md) | Usage | Use the `is not null` pattern instead of `is object` | Yes |
 | [NE0007](https://github.com/dailydevops/analyzer/blob/main/docs/rules/NE0007.md) | Documentation | Use `<see langword="..."/>` instead of `<c>...</c>` or `<code>...</code>` for C# keywords | Yes |
+| [NE0008](https://github.com/dailydevops/analyzer/blob/main/docs/rules/NE0008.md) | Documentation | Use `<see cref="..."/>` instead of `<c>...</c>` or `<code>...</code>` for native type names | Yes |
 
 A `DiagnosticSuppressor` (NES0001) also ships alongside NE0007: it suppresses Meziantou.Analyzer's `MA0154`
 wherever NE0007 already reports the same location, so a consumer running both analyzers doesn't get the

@@ -135,4 +135,32 @@ internal static class CSharpKeywords
         "with",
         "yield"
     );
+
+    /// <summary>
+    /// Native/predefined C# type names, deliberately excluded from <see cref="ReservedKeywords"/> and
+    /// <see cref="ContextualKeywords"/>. <c>void</c> is intentionally excluded here too — it denotes the
+    /// absence of a return type rather than an actual type, and stays classified under
+    /// <see cref="ReservedKeywords"/>.
+    /// </summary>
+    public static readonly ImmutableHashSet<string> NativeTypeKeywords = ImmutableHashSet.Create(
+        StringComparer.Ordinal,
+        "bool",
+        "byte",
+        "char",
+        "decimal",
+        "double",
+        "float",
+        "int",
+        "long",
+        "object",
+        "sbyte",
+        "short",
+        "string",
+        "uint",
+        "ulong",
+        "ushort",
+        "dynamic",
+        "nint",
+        "nuint"
+    );
 }

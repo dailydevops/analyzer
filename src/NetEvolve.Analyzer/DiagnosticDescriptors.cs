@@ -108,4 +108,22 @@ internal static class DiagnosticDescriptors
             + "recognize as such.",
         helpLinkUri: DiagnosticIds.HelpLink(DiagnosticIds.NE0007)
     );
+
+    /// <summary>
+    /// NE0008 — prefer <c>&lt;see cref="..."/&gt;</c> over <c>&lt;c&gt;...&lt;/c&gt;</c> or
+    /// <c>&lt;code&gt;...&lt;/code&gt;</c> for native type names.
+    /// </summary>
+    public static readonly DiagnosticDescriptor NativeTypeCref = new(
+        id: DiagnosticIds.NE0008,
+        title: "Use <see cref=\"...\"/> instead of <c>...</c> or <code>...</code> for native type names",
+        messageFormat: "Use <see cref=\"{0}\"/> instead of <{1}>{0}</{1}>",
+        category: DiagnosticCategories.Documentation,
+        defaultSeverity: DiagnosticSeverity.Warning,
+        isEnabledByDefault: true,
+        description: "A <c> or <code> element whose entire content is a single native type name (e.g. "
+            + "'string', 'int') carries no semantic meaning; <see cref=\"...\"/> is the dedicated construct "
+            + "for referencing a type and is what IntelliSense and documentation generators recognize as "
+            + "such.",
+        helpLinkUri: DiagnosticIds.HelpLink(DiagnosticIds.NE0008)
+    );
 }
