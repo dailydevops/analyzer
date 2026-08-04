@@ -63,6 +63,11 @@ internal static class DiagnosticIds
     /// </summary>
     public const string NE0007 = DiagnosticPrefix + "0007";
 
+    /// <summary>
+    /// NE0008 — prefer <c>&lt;see cref="..."/&gt;</c> over <c>&lt;c&gt;...&lt;/c&gt;</c> for native type names.
+    /// </summary>
+    public const string NE0008 = DiagnosticPrefix + "0008";
+
     // Suppressors
 
     /// <summary>
