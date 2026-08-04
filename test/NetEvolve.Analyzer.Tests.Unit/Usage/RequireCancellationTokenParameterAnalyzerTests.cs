@@ -240,6 +240,30 @@ public sealed class RequireCancellationTokenParameterAnalyzerTests
             """
         );
 
+    [Test]
+    public Task ReturnsArray_NoDiagnostic() =>
+        CSharpAnalyzerVerifier<RequireCancellationTokenParameterAnalyzer>.VerifyAnalyzerAsync(
+            """
+            public sealed class Sample
+            {
+                public int[] Run() => System.Array.Empty<int>();
+            }
+            """
+        );
+
+    [Test]
+    public Task ReturnsUnrelatedGenericType_NoDiagnostic() =>
+        CSharpAnalyzerVerifier<RequireCancellationTokenParameterAnalyzer>.VerifyAnalyzerAsync(
+            """
+            using System.Collections.Generic;
+
+            public sealed class Sample
+            {
+                public List<int> Run() => new List<int>();
+            }
+            """
+        );
+
     // ---- Negative: a local function is not a top-level method declaration ---------------------------------
 
     [Test]

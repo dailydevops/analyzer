@@ -303,4 +303,135 @@ public sealed class RequireCancellationTokenParameterCodeFixTests
             }
             """
         );
+
+    // ---- Using-directive insertion edge cases ----------------------------------------------------------
+
+    [Test]
+    public Task BlockScopedNamespaceWithExistingUsings_UsingInsertedAtNamespaceLevel() =>
+        CSharpCodeFixVerifier<
+            RequireCancellationTokenParameterAnalyzer,
+            RequireCancellationTokenParameterCodeFixProvider
+        >.VerifyCodeFixAsync(
+            """
+            namespace Sample
+            {
+                using System.Threading.Tasks;
+
+                public sealed class Sample
+                {
+                    public Task {|NE0010:Run|}() => Task.CompletedTask;
+                }
+            }
+            """,
+            """
+            namespace Sample
+            {
+                using System.Threading;
+                using System.Threading.Tasks;
+
+                public sealed class Sample
+                {
+                    public Task Run(CancellationToken cancellationToken = default) => Task.CompletedTask;
+                }
+            }
+            """
+        );
+
+    [Test]
+    public Task NoUsingsAnywhereInFile_AddsUsingAtTop() =>
+        CSharpCodeFixVerifier<
+            RequireCancellationTokenParameterAnalyzer,
+            RequireCancellationTokenParameterCodeFixProvider
+        >.VerifyCodeFixAsync(
+            """
+            public sealed class Sample
+            {
+                public System.Threading.Tasks.Task {|NE0010:Run|}() => System.Threading.Tasks.Task.CompletedTask;
+            }
+            """,
+            """
+            using System.Threading;
+            public sealed class Sample
+            {
+                public System.Threading.Tasks.Task Run(CancellationToken cancellationToken = default) => System.Threading.Tasks.Task.CompletedTask;
+            }
+            """
+        );
+
+    [Test]
+    public Task NewUsingSortsAfterAllExisting_AppendedAtEnd() =>
+        CSharpCodeFixVerifier<
+            RequireCancellationTokenParameterAnalyzer,
+            RequireCancellationTokenParameterCodeFixProvider
+        >.VerifyCodeFixAsync(
+            """
+            using System.Collections.Generic;
+
+            public sealed class Sample
+            {
+                public System.Threading.Tasks.Task {|NE0010:Run|}()
+                {
+                    _ = new List<int>();
+                    return System.Threading.Tasks.Task.CompletedTask;
+                }
+            }
+            """,
+            """
+            using System.Collections.Generic;
+            using System.Threading;
+
+            public sealed class Sample
+            {
+                public System.Threading.Tasks.Task Run(CancellationToken cancellationToken = default)
+                {
+                    _ = new List<int>();
+                    return System.Threading.Tasks.Task.CompletedTask;
+                }
+            }
+            """
+        );
+
+    // ---- Call-site propagation edge cases --------------------------------------------------------------
+
+    [Test]
+    public Task SiblingOverloadWithMismatchedLeadingParameter_IsNotAppendable() =>
+        CSharpCodeFixVerifier<
+            RequireCancellationTokenParameterAnalyzer,
+            RequireCancellationTokenParameterCodeFixProvider
+        >.VerifyCodeFixAsync(
+            """
+            using System.Threading;
+            using System.Threading.Tasks;
+
+            public sealed class Sample
+            {
+                public Task {|NE0010:Run|}(int value)
+                {
+                    HelperAsync(value);
+                    return Task.CompletedTask;
+                }
+
+                private static void HelperAsync(int value) { }
+
+                private static Task HelperAsync(string value, CancellationToken token) => Task.CompletedTask;
+            }
+            """,
+            """
+            using System.Threading;
+            using System.Threading.Tasks;
+
+            public sealed class Sample
+            {
+                public Task Run(int value, CancellationToken cancellationToken = default)
+                {
+                    HelperAsync(value);
+                    return Task.CompletedTask;
+                }
+
+                private static void HelperAsync(int value) { }
+
+                private static Task HelperAsync(string value, CancellationToken token) => Task.CompletedTask;
+            }
+            """
+        );
 }

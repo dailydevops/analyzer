@@ -68,12 +68,10 @@ public sealed class RequireCancellationTokenParameterAnalyzer : DiagnosticAnalyz
     {
         var method = (IMethodSymbol)context.Symbol;
 
+        // An explicit interface implementation's MethodKind is ExplicitInterfaceImplementation, never Ordinary,
+        // so it's already excluded by the check above — there's no case where a method reaches this point with
+        // a non-empty ExplicitInterfaceImplementations list.
         if (method.MethodKind != MethodKind.Ordinary || method.IsOverride || method.IsPartialDefinition)
-        {
-            return;
-        }
-
-        if (!method.ExplicitInterfaceImplementations.IsEmpty)
         {
             return;
         }
