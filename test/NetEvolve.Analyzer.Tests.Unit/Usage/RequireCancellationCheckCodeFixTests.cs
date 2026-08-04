@@ -453,4 +453,238 @@ public sealed class RequireCancellationCheckCodeFixTests
             """,
             IsCancellationRequestedKey
         );
+
+    // ---- Guard-clause detection edge cases --------------------------------------------------------------
+
+    [Test]
+    public Task BracedGuardClause_AddsThrowIfCancellationRequestedAfterGuard() =>
+        RequireCancellationCheckCodeFixVerifier<
+            RequireCancellationCheckAnalyzer,
+            RequireCancellationCheckCodeFixProvider
+        >.VerifyCodeFixAsync(
+            """
+            using System;
+            using System.Threading;
+
+            public sealed class Sample
+            {
+                public void {|NE0009:Run|}(object value, CancellationToken cancellationToken)
+                {
+                    if (value is null)
+                    {
+                        throw new ArgumentNullException(nameof(value));
+                    }
+                    DoWork(value);
+                }
+
+                private static void DoWork(object value) { }
+            }
+            """,
+            """
+            using System;
+            using System.Threading;
+
+            public sealed class Sample
+            {
+                public void Run(object value, CancellationToken cancellationToken)
+                {
+                    if (value is null)
+                    {
+                        throw new ArgumentNullException(nameof(value));
+                    }
+                    cancellationToken.ThrowIfCancellationRequested();
+                    DoWork(value);
+                }
+
+                private static void DoWork(object value) { }
+            }
+            """,
+            ThrowIfCancellationRequestedKey
+        );
+
+    [Test]
+    public Task ThrowViaMethodCall_IsNotAGuardClause_ChecksInsertedFirst() =>
+        RequireCancellationCheckCodeFixVerifier<
+            RequireCancellationCheckAnalyzer,
+            RequireCancellationCheckCodeFixProvider
+        >.VerifyCodeFixAsync(
+            """
+            using System;
+            using System.Threading;
+
+            public sealed class Sample
+            {
+                public void {|NE0009:Run|}(object value, CancellationToken cancellationToken)
+                {
+                    if (value is null)
+                        throw GetException();
+                    DoWork(value);
+                }
+
+                private static void DoWork(object value) { }
+
+                private static Exception GetException() => new ArgumentNullException("value");
+            }
+            """,
+            """
+            using System;
+            using System.Threading;
+
+            public sealed class Sample
+            {
+                public void Run(object value, CancellationToken cancellationToken)
+                {
+                    cancellationToken.ThrowIfCancellationRequested();
+                    if (value is null)
+                        throw GetException();
+                    DoWork(value);
+                }
+
+                private static void DoWork(object value) { }
+
+                private static Exception GetException() => new ArgumentNullException("value");
+            }
+            """,
+            ThrowIfCancellationRequestedKey
+        );
+
+    [Test]
+    public Task ThrowIfNullGuardHelper_AddsThrowIfCancellationRequestedAfterGuard() =>
+        RequireCancellationCheckCodeFixVerifier<
+            RequireCancellationCheckAnalyzer,
+            RequireCancellationCheckCodeFixProvider
+        >.VerifyCodeFixAsync(
+            """
+            using System;
+            using System.Threading;
+
+            public sealed class Sample
+            {
+                public void {|NE0009:Run|}(object value, CancellationToken cancellationToken)
+                {
+                    ArgumentNullException.ThrowIfNull(value);
+                    DoWork(value);
+                }
+
+                private static void DoWork(object value) { }
+            }
+            """,
+            """
+            using System;
+            using System.Threading;
+
+            public sealed class Sample
+            {
+                public void Run(object value, CancellationToken cancellationToken)
+                {
+                    ArgumentNullException.ThrowIfNull(value);
+                    cancellationToken.ThrowIfCancellationRequested();
+                    DoWork(value);
+                }
+
+                private static void DoWork(object value) { }
+            }
+            """,
+            ThrowIfCancellationRequestedKey
+        );
+
+    [Test]
+    public Task QualifiedCancellationTokenType_IsRecognized() =>
+        RequireCancellationCheckCodeFixVerifier<
+            RequireCancellationCheckAnalyzer,
+            RequireCancellationCheckCodeFixProvider
+        >.VerifyCodeFixAsync(
+            """
+            public sealed class Sample
+            {
+                public void {|NE0009:Run|}(System.Threading.CancellationToken cancellationToken)
+                {
+                    DoWork();
+                }
+
+                private static void DoWork() { }
+            }
+            """,
+            """
+            public sealed class Sample
+            {
+                public void Run(System.Threading.CancellationToken cancellationToken)
+                {
+                    cancellationToken.ThrowIfCancellationRequested();
+                    DoWork();
+                }
+
+                private static void DoWork() { }
+            }
+            """,
+            ThrowIfCancellationRequestedKey
+        );
+
+    // ---- Insertion position edge cases -------------------------------------------------------------------
+
+    [Test]
+    public Task GuardOnlyBody_InsertsCheckAfterLastStatement() =>
+        RequireCancellationCheckCodeFixVerifier<
+            RequireCancellationCheckAnalyzer,
+            RequireCancellationCheckCodeFixProvider
+        >.VerifyCodeFixAsync(
+            """
+            using System;
+            using System.Threading;
+
+            public sealed class Sample
+            {
+                public void {|NE0009:Run|}(object value, CancellationToken cancellationToken)
+                {
+                    if (value is null)
+                        throw new ArgumentNullException(nameof(value));
+                }
+            }
+            """,
+            """
+            using System;
+            using System.Threading;
+
+            public sealed class Sample
+            {
+                public void Run(object value, CancellationToken cancellationToken)
+                {
+                    if (value is null)
+                        throw new ArgumentNullException(nameof(value));
+                    cancellationToken.ThrowIfCancellationRequested();
+                }
+            }
+            """,
+            ThrowIfCancellationRequestedKey
+        );
+
+    [Test]
+    public Task EmptyBody_InsertsCheckIndentedOneLevelDeeper() =>
+        RequireCancellationCheckCodeFixVerifier<
+            RequireCancellationCheckAnalyzer,
+            RequireCancellationCheckCodeFixProvider
+        >.VerifyCodeFixAsync(
+            """
+            using System.Threading;
+
+            public sealed class Sample
+            {
+                public void {|NE0009:Run|}(CancellationToken cancellationToken)
+                {
+                }
+            }
+            """,
+            """
+            using System.Threading;
+
+            public sealed class Sample
+            {
+                public void Run(CancellationToken cancellationToken)
+                {
+                    cancellationToken.ThrowIfCancellationRequested();
+                }
+            }
+            """,
+            ThrowIfCancellationRequestedKey
+        );
 }

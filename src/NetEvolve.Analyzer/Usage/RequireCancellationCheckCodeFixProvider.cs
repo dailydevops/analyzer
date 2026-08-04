@@ -332,10 +332,11 @@ public sealed class RequireCancellationCheckCodeFixProvider : CodeFixProvider
     // Whether 'method' is (or contains, at its own nesting level) an iterator — i.e. already uses 'yield
     // return'/'yield break' somewhere in its body. Descent stops at a nested local function, since a local
     // function's own 'yield' makes only that local function an iterator, not the enclosing method.
+    // The code fix only ever runs against a diagnostic the analyzer reported, and the analyzer only reports on
+    // methods with a block body — Body is never null here.
     private static bool IsIteratorMethod(MethodDeclarationSyntax method) =>
-        method.Body is not null
-        && method
-            .Body.DescendantNodes(descendIntoChildren: node => node is not LocalFunctionStatementSyntax)
+        method
+            .Body!.DescendantNodes(descendIntoChildren: node => node is not LocalFunctionStatementSyntax)
             .OfType<YieldStatementSyntax>()
             .Any();
 }
