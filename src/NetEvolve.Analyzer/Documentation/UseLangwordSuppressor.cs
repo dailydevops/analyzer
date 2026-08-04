@@ -1,12 +1,12 @@
-﻿namespace NetEvolve.Analyzer.Documentation;
+namespace NetEvolve.Analyzer.Documentation;
 
-using System;
 using System.Collections.Immutable;
 using System.Linq;
 using System.Threading;
 using Microsoft.CodeAnalysis;
 using Microsoft.CodeAnalysis.CSharp.Syntax;
 using Microsoft.CodeAnalysis.Diagnostics;
+using NetEvolve.Analyzer.Abstractions;
 
 /// <summary>
 /// NES0001 — suppresses Meziantou.Analyzer's <c>MA0154</c> ("Use langword in XML comment") wherever
@@ -17,14 +17,11 @@ using Microsoft.CodeAnalysis.Diagnostics;
 /// excludes (see <see cref="Helpers.CSharpKeywords"/>).
 /// </summary>
 [DiagnosticAnalyzer(LanguageNames.CSharp)]
-public sealed class UseLangwordSuppressor : DiagnosticSuppressor
+internal sealed class UseLangwordSuppressor : NetEvolveSuppressorBase
 {
-    private const string Ma0154 = "MA0154";
-
-    /// <summary>The suppression descriptor for <see cref="Ma0154"/>.</summary>
     internal static readonly SuppressionDescriptor Suppression = new(
         id: DiagnosticIds.NES0001,
-        suppressedDiagnosticId: Ma0154,
+        suppressedDiagnosticId: "MA0154",
         justification: "NE0007 already reports this <c>/<code> keyword usage; suppressed to avoid a duplicate "
             + "diagnostic from Meziantou.Analyzer."
     );
@@ -34,19 +31,7 @@ public sealed class UseLangwordSuppressor : DiagnosticSuppressor
         ImmutableArray.Create(Suppression);
 
     /// <inheritdoc />
-    public override void ReportSuppressions(SuppressionAnalysisContext context)
-    {
-        var ma0154Diagnostics = context
-            .ReportedDiagnostics.Where(diagnostic => string.Equals(diagnostic.Id, Ma0154, StringComparison.Ordinal))
-            .Where(diagnostic => IsAlsoReportedByNE0007(diagnostic, context.CancellationToken));
-
-        foreach (var diagnostic in ma0154Diagnostics)
-        {
-            context.ReportSuppression(Microsoft.CodeAnalysis.Diagnostics.Suppression.Create(Suppression, diagnostic));
-        }
-    }
-
-    private static bool IsAlsoReportedByNE0007(Diagnostic diagnostic, CancellationToken cancellationToken)
+    protected override bool ShouldSuppress(Diagnostic diagnostic, CancellationToken cancellationToken)
     {
         var tree = diagnostic.Location.SourceTree;
         if (tree is null)

@@ -85,8 +85,9 @@ public sealed class UseLangwordSuppressorTests
     /// element regardless of content, so it can both agree and disagree with NE0007 on purpose.
     /// </summary>
     // RS2008: a test-only stand-in reusing the real "MA0154" id, not a shipped analyzer of this package, so
-    // release tracking doesn't apply.
-#pragma warning disable RS2008
+    // release tracking doesn't apply. RS1038/RS1041: this test assembly targets net10.0 and references
+    // Workspaces for other tests; this fake analyzer is never packed/loaded as a real compiler extension.
+#pragma warning disable RS1038, RS1041, RS2008
     [DiagnosticAnalyzer(LanguageNames.CSharp)]
     private sealed class FakeMa0154Analyzer : DiagnosticAnalyzer
     {
@@ -120,5 +121,5 @@ public sealed class UseLangwordSuppressorTests
             });
         }
     }
-#pragma warning restore RS2008
+#pragma warning restore RS1038, RS1041, RS2008
 }
