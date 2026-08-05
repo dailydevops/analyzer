@@ -14,7 +14,7 @@ using NetEvolve.Analyzer.Helpers;
 /// content is a single recognized native/predefined C# type name (<see cref="CSharpKeywords.NativeTypeKeywords"/>)
 /// or common BCL value type name (<see cref="CSharpKeywords.WellKnownBclTypeNames"/> — <c>Guid</c>,
 /// <c>DateTime</c>, <c>DateTimeOffset</c>, <c>TimeSpan</c>), which should instead use
-/// <c>&lt;see cref="..."/&gt;</c>. <c>DateOnly</c>/<c>TimeOnly</c> (<see cref="CSharpKeywords.ConditionalBclTypeNames"/>)
+/// <c>&lt;see cref="..."/&gt;</c>. <c>DateOnly</c>/<c>TimeOnly</c> (<see cref="CSharpKeywords.ConditionalBclTypeMinimumVersions"/>)
 /// join the recognized set only when the compilation actually has the type in scope — a consumer targeting a
 /// framework older than .NET 6 has no such type to <c>cref</c>, so flagging it there would be wrong. The whole
 /// documentation-comment tree of a member is inspected, not just <c>&lt;summary&gt;</c> — the same mistake is
@@ -48,7 +48,7 @@ public sealed class NativeTypeCrefAnalyzer : DiagnosticAnalyzer
     private static void AnalyzeCompilationStart(CompilationStartAnalysisContext context)
     {
         var recognizedTypeNames = HasConditionalBclType(context.Compilation)
-            ? BaseRecognizedTypeNames.Union(CSharpKeywords.ConditionalBclTypeNames)
+            ? BaseRecognizedTypeNames.Union(CSharpKeywords.ConditionalBclTypeMinimumVersions.Keys)
             : BaseRecognizedTypeNames;
 
         context.RegisterSyntaxTreeAction(treeContext => AnalyzeTree(treeContext, recognizedTypeNames));
