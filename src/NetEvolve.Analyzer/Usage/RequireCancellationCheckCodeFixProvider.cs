@@ -107,6 +107,20 @@ public sealed class RequireCancellationCheckCodeFixProvider : CodeFixProvider
             .WithLeadingTrivia(SyntaxFactory.Whitespace(indentation));
 
         var newStatements = statements.Insert(guardCount, checkStatement);
+
+        // Normalize the gap between the inserted check and whatever statement follows it to exactly one blank
+        // line: none was there before (the check would otherwise butt up directly against the next statement),
+        // and if the source already had extra blank lines there, this collapses them back down to one.
+        if (guardCount < statements.Count)
+        {
+            var followingStatement = newStatements[guardCount + 1];
+            var normalizedFollowing = followingStatement.WithLeadingTrivia(
+                SyntaxFactory.EndOfLine("\n"),
+                SyntaxFactory.Whitespace(indentation)
+            );
+            newStatements = newStatements.Replace(followingStatement, normalizedFollowing);
+        }
+
         var newBody = body.WithStatements(newStatements);
 
         return document.WithSyntaxRoot(root.ReplaceNode(body, newBody));
