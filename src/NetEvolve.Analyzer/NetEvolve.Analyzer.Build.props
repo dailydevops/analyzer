@@ -47,4 +47,12 @@
     <AdditionalFiles Include="AnalyzerReleases.Shipped.md" />
     <AdditionalFiles Include="AnalyzerReleases.Unshipped.md" />
   </ItemGroup>
+
+  <ItemGroup Label="Dogfooding: apply this analyzer's own rules to its own source" Condition=" '$(RoslynApiVersion)' != '4.14.0' ">
+    <!-- All four variants compile the same *.cs files; referencing the 4.14 baseline build's output as
+         an Analyzer here (instead of a normal ProjectReference) runs its diagnostics against that shared
+         source without creating a build cycle, since this targets a sibling project, never itself. The
+         4.14 variant is left unchecked by this mechanism, but the other three cover the identical code. -->
+    <ProjectReference Include="NetEvolve.Analyzer.Roslyn4_14.csproj" OutputItemType="Analyzer" ReferenceOutputAssembly="false" PrivateAssets="all" />
+  </ItemGroup>
 </Project>
