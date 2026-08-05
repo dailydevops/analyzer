@@ -35,7 +35,7 @@ internal static class CancellationTokenCallSites
             .DescendantNodesAndSelf(descendIntoChildren: IsNotNestedFunctionScope)
             .Any(node =>
                 node is InvocationExpressionSyntax invocation
-                    ? IsAppendableCall(semanticModel, invocation)
+                    ? TryGetAppendableParameterName(semanticModel, invocation, out _)
                     : node is ExpressionSyntax expression
                         && IsCancellationToken(semanticModel.GetTypeInfo(expression).Type)
             );
@@ -43,14 +43,10 @@ internal static class CancellationTokenCallSites
 
     /// <summary>
     /// All call sites within <paramref name="method"/>'s body/expression-body that a
-    /// <see cref="System.Threading.CancellationToken"/> argument could be appended to.
+    /// <see cref="System.Threading.CancellationToken"/> argument could be appended to, paired with the name of
+    /// the parameter it would be appended as (the invoked method's own parameter name, not the caller's).
     /// </summary>
-    public static List<InvocationExpressionSyntax> CollectAppendableInvocations(
-        SemanticModel semanticModel,
-        MethodDeclarationSyntax method
-    ) => EnumerateAppendableInvocations(semanticModel, method).ToList();
-
-    private static IEnumerable<InvocationExpressionSyntax> EnumerateAppendableInvocations(
+    public static List<AppendableCallSite> CollectAppendableInvocations(
         SemanticModel semanticModel,
         MethodDeclarationSyntax method
     )
@@ -61,10 +57,20 @@ internal static class CancellationTokenCallSites
             return [];
         }
 
-        return searchRoot
-            .DescendantNodesAndSelf(descendIntoChildren: IsNotNestedFunctionScope)
-            .OfType<InvocationExpressionSyntax>()
-            .Where(invocation => IsAppendableCall(semanticModel, invocation));
+        var callSites = new List<AppendableCallSite>();
+        foreach (
+            var invocation in searchRoot
+                .DescendantNodesAndSelf(descendIntoChildren: IsNotNestedFunctionScope)
+                .OfType<InvocationExpressionSyntax>()
+        )
+        {
+            if (TryGetAppendableParameterName(semanticModel, invocation, out var parameterName))
+            {
+                callSites.Add(new AppendableCallSite(invocation, parameterName!));
+            }
+        }
+
+        return callSites;
     }
 
     // Stops descent at a nested lambda/anonymous method/local function: a call inside one of those belongs to
@@ -72,12 +78,22 @@ internal static class CancellationTokenCallSites
     private static bool IsNotNestedFunctionScope(SyntaxNode node) =>
         node is not AnonymousFunctionExpressionSyntax && node is not LocalFunctionStatementSyntax;
 
-    // Whether appending a 'cancellationToken' argument to 'invocation' is safe: either the resolved method
-    // already ends with an unfilled CancellationToken parameter, or there is exactly one sibling overload that
-    // adds one as its trailing parameter and every currently supplied argument would still line up
-    // positionally. Named, ref, and out arguments are left alone entirely to keep this analysis simple.
-    private static bool IsAppendableCall(SemanticModel semanticModel, InvocationExpressionSyntax invocation)
+    // Whether appending a named CancellationToken argument to 'invocation' is safe: either the resolved method
+    // already has an unfilled CancellationToken parameter somewhere past the supplied arguments (not
+    // necessarily last — anything trailing it is left at its default), or there is exactly one sibling
+    // overload that adds one and every currently supplied argument would still line up positionally.
+    // 'parameterName' comes out as the invoked method's own name for that parameter, since the argument is
+    // appended by name specifically so it can target that slot even when other optional parameters follow it;
+    // a positional append could only ever reach a truly last parameter. Named, ref, and out arguments already
+    // present on the call are left alone entirely to keep this analysis simple.
+    private static bool TryGetAppendableParameterName(
+        SemanticModel semanticModel,
+        InvocationExpressionSyntax invocation,
+        out string? parameterName
+    )
     {
+        parameterName = null;
+
         var arguments = invocation.ArgumentList.Arguments;
         if (
             arguments.Any(argument =>
@@ -102,19 +118,50 @@ internal static class CancellationTokenCallSites
         var parameters = invokedMethod.Parameters;
         var suppliedCount = arguments.Count;
 
-        if (
-            parameters.Length > 0
-            && IsCancellationToken(parameters[parameters.Length - 1].Type)
-            && suppliedCount == parameters.Length - 1
-        )
-        {
-            return true;
-        }
-
-        if (parameters.Any(parameter => IsCancellationToken(parameter.Type)) || suppliedCount != parameters.Length)
+        if (suppliedCount > parameters.Length)
         {
             return false;
         }
+
+        if (TryFindSingleCancellationTokenParameterIndex(parameters, out var tokenIndex))
+        {
+            if (
+                tokenIndex >= suppliedCount
+                && AllOtherTrailingParametersOptional(parameters, suppliedCount, tokenIndex)
+            )
+            {
+                parameterName = parameters[tokenIndex].Name;
+                return true;
+            }
+
+            return false;
+        }
+
+        if (parameters.Any(parameter => IsCancellationToken(parameter.Type)))
+        {
+            // More than one CancellationToken parameter - ambiguous which slot the new token would target.
+            return false;
+        }
+
+        return TryGetAppendableParameterNameFromSiblingOverload(
+            invokedMethod,
+            parameters,
+            suppliedCount,
+            out parameterName
+        );
+    }
+
+    // Looks for exactly one sibling overload of 'invokedMethod' that adds a CancellationToken parameter the
+    // current call could be redirected to (see IsAppendableOverload), and, if found, returns that parameter's
+    // name.
+    private static bool TryGetAppendableParameterNameFromSiblingOverload(
+        IMethodSymbol invokedMethod,
+        ImmutableArray<IParameterSymbol> parameters,
+        int suppliedCount,
+        out string? parameterName
+    )
+    {
+        parameterName = null;
 
         var containingType = invokedMethod.ContainingType;
         if (containingType is null)
@@ -126,26 +173,111 @@ internal static class CancellationTokenCallSites
             .GetMembers(invokedMethod.Name)
             .OfType<IMethodSymbol>()
             .Where(candidate => !SymbolEqualityComparer.Default.Equals(candidate, invokedMethod))
-            .Where(candidate => candidate.Parameters.Length == parameters.Length + 1)
-            .Where(candidate =>
-                candidate.Parameters.Length > 0
-                && IsCancellationToken(candidate.Parameters[candidate.Parameters.Length - 1].Type)
-            )
-            .Where(candidate => LeadingParameterTypesMatch(candidate.Parameters, parameters))
+            .Where(candidate => IsAppendableOverload(candidate, parameters, suppliedCount))
             .Take(2)
             .ToList();
 
-        return matchingOverloads.Count == 1;
+        if (
+            matchingOverloads.Count != 1
+            || !TryFindSingleCancellationTokenParameterIndex(matchingOverloads[0].Parameters, out var tokenIndex)
+        )
+        {
+            return false;
+        }
+
+        parameterName = matchingOverloads[0].Parameters[tokenIndex].Name;
+        return true;
     }
 
-    private static bool LeadingParameterTypesMatch(
-        ImmutableArray<IParameterSymbol> longer,
-        ImmutableArray<IParameterSymbol> shorter
+    // Whether 'candidate' is a sibling overload that adds exactly one CancellationToken parameter — anywhere
+    // past the supplied arguments, not necessarily last — to 'originalParameters', with every other parameter
+    // lining up by type and every parameter left without a supplied argument having a default value.
+    private static bool IsAppendableOverload(
+        IMethodSymbol candidate,
+        ImmutableArray<IParameterSymbol> originalParameters,
+        int suppliedCount
     )
     {
-        for (var index = 0; index < shorter.Length; index++)
+        if (candidate.Parameters.Length != originalParameters.Length + 1)
         {
-            if (!SymbolEqualityComparer.Default.Equals(longer[index].Type, shorter[index].Type))
+            return false;
+        }
+
+        if (!TryFindSingleCancellationTokenParameterIndex(candidate.Parameters, out var tokenIndex))
+        {
+            return false;
+        }
+
+        return tokenIndex >= suppliedCount
+            && ParametersMatchAroundInsertedToken(candidate.Parameters, originalParameters, tokenIndex)
+            && AllOtherTrailingParametersOptional(candidate.Parameters, suppliedCount, tokenIndex);
+    }
+
+    // Finds the single CancellationToken-typed parameter in 'parameters'. Returns false (with index -1) both
+    // when there is none and when there is more than one — the latter is ambiguous as to which slot a new
+    // token argument would target, so callers treat it the same as "not found".
+    private static bool TryFindSingleCancellationTokenParameterIndex(
+        ImmutableArray<IParameterSymbol> parameters,
+        out int index
+    )
+    {
+        index = -1;
+        for (var i = 0; i < parameters.Length; i++)
+        {
+            if (!IsCancellationToken(parameters[i].Type))
+            {
+                continue;
+            }
+
+            if (index >= 0)
+            {
+                index = -1;
+                return false;
+            }
+
+            index = i;
+        }
+
+        return index >= 0;
+    }
+
+    // Whether every parameter at or past 'suppliedCount' — other than 'excludedIndex', which the caller is
+    // about to fill by name — can safely be left unsupplied: it has a default value, or it's a trailing
+    // 'params' parameter (necessarily the last one, and legal to omit entirely).
+    private static bool AllOtherTrailingParametersOptional(
+        ImmutableArray<IParameterSymbol> parameters,
+        int suppliedCount,
+        int excludedIndex
+    )
+    {
+        for (var index = suppliedCount; index < parameters.Length; index++)
+        {
+            if (index != excludedIndex && !parameters[index].IsOptional && !parameters[index].IsParams)
+            {
+                return false;
+            }
+        }
+
+        return true;
+    }
+
+    // Whether 'candidateParameters' equals 'originalParameters' with one CancellationToken parameter spliced
+    // in at 'insertedIndex' — every other parameter, shifted by one once past that index, still matches by type.
+    private static bool ParametersMatchAroundInsertedToken(
+        ImmutableArray<IParameterSymbol> candidateParameters,
+        ImmutableArray<IParameterSymbol> originalParameters,
+        int insertedIndex
+    )
+    {
+        for (var i = 0; i < originalParameters.Length; i++)
+        {
+            var candidateIndex = i < insertedIndex ? i : i + 1;
+            if (
+                !SymbolEqualityComparer.Default.Equals(
+                    candidateParameters[candidateIndex].Type,
+                    originalParameters[i].Type
+                )
+            )
             {
                 return false;
             }
@@ -156,4 +288,22 @@ internal static class CancellationTokenCallSites
 
     private static bool IsCancellationToken(ITypeSymbol? type) =>
         type is { Name: "CancellationToken", ContainingNamespace.Name: "Threading" };
+
+    /// <summary>
+    /// A call site a <see cref="System.Threading.CancellationToken"/> argument can be appended to, together
+    /// with the name of the parameter it targets on the invoked method — used to append the argument by name
+    /// rather than positionally.
+    /// </summary>
+    public readonly struct AppendableCallSite
+    {
+        public AppendableCallSite(InvocationExpressionSyntax invocation, string parameterName)
+        {
+            Invocation = invocation;
+            ParameterName = parameterName;
+        }
+
+        public InvocationExpressionSyntax Invocation { get; }
+
+        public string ParameterName { get; }
+    }
 }
