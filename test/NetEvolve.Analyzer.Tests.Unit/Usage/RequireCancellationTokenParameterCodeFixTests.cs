@@ -42,6 +42,32 @@ public sealed class RequireCancellationTokenParameterCodeFixTests
         );
 
     [Test]
+    public Task FlaggedMethodHasParamsParameter_InsertsTokenBeforeParams() =>
+        CSharpCodeFixVerifier<
+            RequireCancellationTokenParameterAnalyzer,
+            RequireCancellationTokenParameterCodeFixProvider
+        >.VerifyCodeFixAsync(
+            """
+            using System.Threading;
+            using System.Threading.Tasks;
+
+            public abstract class Sample
+            {
+                public abstract Task {|NE0010:Run|}(params int[] values);
+            }
+            """,
+            """
+            using System.Threading;
+            using System.Threading.Tasks;
+
+            public abstract class Sample
+            {
+                public abstract Task Run(CancellationToken cancellationToken = default, params int[] values);
+            }
+            """
+        );
+
+    [Test]
     public Task ExistingParameters_AppendsTokenLast() =>
         CSharpCodeFixVerifier<
             RequireCancellationTokenParameterAnalyzer,

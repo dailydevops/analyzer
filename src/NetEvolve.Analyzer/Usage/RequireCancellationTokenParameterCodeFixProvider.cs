@@ -14,8 +14,10 @@ using NetEvolve.Analyzer.Helpers;
 
 /// <summary>
 /// Code fix for <see cref="RequireCancellationTokenParameterAnalyzer">NE0010</see>. Appends
-/// <c>CancellationToken cancellationToken = default</c> as the last parameter of the flagged method, adding
-/// a <c>using System.Threading;</c> directive when the file does not already have one in scope, and — on a
+/// <c>CancellationToken cancellationToken = default</c> as the last parameter of the flagged method — or, if
+/// the method declares a <see langword="params"/> parameter, inserts it right before that parameter instead,
+/// since <see langword="params"/> must stay last — adding a <c>using System.Threading;</c> directive when the
+/// file does not already have one in scope, and — on a
 /// best-effort basis — passes the new token through to call sites within the method's own body that either
 /// already have an unfilled <c>CancellationToken</c> parameter or have exactly one sibling overload adding
 /// one. The token is always appended as a named argument (<c>cancellationToken: cancellationToken</c>) rather
@@ -83,7 +85,7 @@ public sealed class RequireCancellationTokenParameterCodeFixProvider : CodeFixPr
                 SyntaxFactory.EqualsValueClause(SyntaxFactory.LiteralExpression(SyntaxKind.DefaultLiteralExpression))
             );
 
-        var updatedMethod = methodWithPropagatedCalls.AddParameterListParameters(parameter);
+        var updatedMethod = InsertParameter(methodWithPropagatedCalls, parameter);
 
         var newRoot = root.ReplaceNode(currentMethod, updatedMethod);
         newRoot = EnsureSystemThreadingUsing(newRoot);
@@ -119,6 +121,22 @@ public sealed class RequireCancellationTokenParameterCodeFixProvider : CodeFixPr
             (originalInvocation, _) =>
                 originalInvocation.AddArgumentListArguments(argumentByInvocation[originalInvocation])
         );
+    }
+
+    // A params parameter must stay last in the parameter list, so the new CancellationToken parameter is
+    // inserted right before it rather than appended after — appending after would produce invalid syntax.
+    private static MethodDeclarationSyntax InsertParameter(MethodDeclarationSyntax method, ParameterSyntax parameter)
+    {
+        var parameters = method.ParameterList.Parameters;
+        var paramsIndex = parameters.IndexOf(p => p.Modifiers.Any(SyntaxKind.ParamsKeyword));
+
+        if (paramsIndex < 0)
+        {
+            return method.AddParameterListParameters(parameter);
+        }
+
+        var updatedParameters = parameters.Insert(paramsIndex, parameter);
+        return method.WithParameterList(method.ParameterList.WithParameters(updatedParameters));
     }
 
     private static CompilationUnitSyntax EnsureSystemThreadingUsing(CompilationUnitSyntax root)
