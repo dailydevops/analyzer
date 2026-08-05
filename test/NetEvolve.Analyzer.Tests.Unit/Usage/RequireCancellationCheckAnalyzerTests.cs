@@ -246,6 +246,277 @@ public sealed class RequireCancellationCheckAnalyzerTests
             """
         );
 
+    // ---- Negative: a leading loop whose own first statement is the check satisfies the rule --------------
+
+    [Test]
+    public Task ForLoopFirstStatementThrowIfCancellationRequested_NoDiagnostic() =>
+        CSharpAnalyzerVerifier<RequireCancellationCheckAnalyzer>.VerifyAnalyzerAsync(
+            """
+            using System.Threading;
+
+            public sealed class Sample
+            {
+                public void Run(int count, CancellationToken cancellationToken)
+                {
+                    for (var i = 0; i < count; i++)
+                    {
+                        cancellationToken.ThrowIfCancellationRequested();
+
+                        DoWork(i);
+                    }
+                }
+
+                private static void DoWork(int value) { }
+            }
+            """
+        );
+
+    [Test]
+    public Task ForEachLoopFirstStatementIsCancellationRequestedReturn_NoDiagnostic() =>
+        CSharpAnalyzerVerifier<RequireCancellationCheckAnalyzer>.VerifyAnalyzerAsync(
+            """
+            using System.Collections.Generic;
+            using System.Threading;
+
+            public sealed class Sample
+            {
+                public void Run(IEnumerable<int> items, CancellationToken cancellationToken)
+                {
+                    foreach (var item in items)
+                    {
+                        if (cancellationToken.IsCancellationRequested)
+                        {
+                            return;
+                        }
+
+                        DoWork(item);
+                    }
+                }
+
+                private static void DoWork(int value) { }
+            }
+            """
+        );
+
+    [Test]
+    public Task WhileLoopSingleStatementBodyThrowIfCancellationRequested_NoDiagnostic() =>
+        CSharpAnalyzerVerifier<RequireCancellationCheckAnalyzer>.VerifyAnalyzerAsync(
+            """
+            using System.Threading;
+
+            public sealed class Sample
+            {
+                public void Run(CancellationToken cancellationToken)
+                {
+                    while (true)
+                        cancellationToken.ThrowIfCancellationRequested();
+                }
+            }
+            """
+        );
+
+    [Test]
+    public Task GuardClause_ThenDoLoopFirstStatementThrowIfCancellationRequested_NoDiagnostic() =>
+        CSharpAnalyzerVerifier<RequireCancellationCheckAnalyzer>.VerifyAnalyzerAsync(
+            """
+            using System;
+            using System.Threading;
+
+            public sealed class Sample
+            {
+                public void Run(object value, CancellationToken cancellationToken)
+                {
+                    if (value is null)
+                        throw new ArgumentNullException(nameof(value));
+
+                    do
+                    {
+                        cancellationToken.ThrowIfCancellationRequested();
+
+                        DoWork(value);
+                    } while (false);
+                }
+
+                private static void DoWork(object value) { }
+            }
+            """
+        );
+
+    [Test]
+    public Task ThrowIfNullOrEmptyGuardHelper_ThenForLoopFirstStatementThrowIfCancellationRequested_NoDiagnostic() =>
+        CSharpAnalyzerVerifier<RequireCancellationCheckAnalyzer>.VerifyAnalyzerAsync(
+            """
+            using System;
+            using System.Threading;
+
+            public sealed class Sample
+            {
+                public void Run(string text, int count, CancellationToken cancellationToken)
+                {
+                    ArgumentException.ThrowIfNullOrEmpty(text);
+
+                    for (var i = 0; i < count; i++)
+                    {
+                        cancellationToken.ThrowIfCancellationRequested();
+
+                        DoWork(i);
+                    }
+                }
+
+                private static void DoWork(int value) { }
+            }
+            """
+        );
+
+    // ---- Negative: nested loops — the check may sit at any nesting depth, as long as it leads ------------
+
+    [Test]
+    public Task NestedForLoops_InnermostLoopFirstStatementThrowIfCancellationRequested_NoDiagnostic() =>
+        CSharpAnalyzerVerifier<RequireCancellationCheckAnalyzer>.VerifyAnalyzerAsync(
+            """
+            using System.Threading;
+
+            public sealed class Sample
+            {
+                public void Run(int rows, int columns, CancellationToken cancellationToken)
+                {
+                    for (var row = 0; row < rows; row++)
+                    {
+                        for (var column = 0; column < columns; column++)
+                        {
+                            cancellationToken.ThrowIfCancellationRequested();
+
+                            DoWork(row, column);
+                        }
+                    }
+                }
+
+                private static void DoWork(int row, int column) { }
+            }
+            """
+        );
+
+    [Test]
+    public Task ForEachVariableLoopFirstStatementThrowIfCancellationRequested_NoDiagnostic() =>
+        CSharpAnalyzerVerifier<RequireCancellationCheckAnalyzer>.VerifyAnalyzerAsync(
+            """
+            using System.Collections.Generic;
+            using System.Threading;
+
+            public sealed class Sample
+            {
+                public void Run(IEnumerable<(int Row, int Column)> items, CancellationToken cancellationToken)
+                {
+                    foreach (var (row, column) in items)
+                    {
+                        cancellationToken.ThrowIfCancellationRequested();
+
+                        DoWork(row, column);
+                    }
+                }
+
+                private static void DoWork(int row, int column) { }
+            }
+            """
+        );
+
+    // ---- Positive: a loop whose first statement is not the check is still flagged -------------------------
+
+    [Test]
+    public Task ForLoopEmptyBody_MissingCheck_Reports() =>
+        CSharpAnalyzerVerifier<RequireCancellationCheckAnalyzer>.VerifyAnalyzerAsync(
+            """
+            using System.Threading;
+
+            public sealed class Sample
+            {
+                public void {|NE0009:Run|}(int count, CancellationToken cancellationToken)
+                {
+                    for (var i = 0; i < count; i++)
+                    {
+                    }
+                }
+            }
+            """
+        );
+
+    [Test]
+    public Task ForLoopFirstStatementMissingCheck_Reports() =>
+        CSharpAnalyzerVerifier<RequireCancellationCheckAnalyzer>.VerifyAnalyzerAsync(
+            """
+            using System.Threading;
+
+            public sealed class Sample
+            {
+                public void {|NE0009:Run|}(int count, CancellationToken cancellationToken)
+                {
+                    for (var i = 0; i < count; i++)
+                    {
+                        DoWork(i);
+
+                        cancellationToken.ThrowIfCancellationRequested();
+                    }
+                }
+
+                private static void DoWork(int value) { }
+            }
+            """
+        );
+
+    // ---- Positive: only the leading statement is examined — a check in a later sibling loop does not count --
+
+    [Test]
+    public Task FirstLoopMissingCheck_SecondLoopHasCheck_StillReports() =>
+        CSharpAnalyzerVerifier<RequireCancellationCheckAnalyzer>.VerifyAnalyzerAsync(
+            """
+            using System.Threading;
+
+            public sealed class Sample
+            {
+                public void {|NE0009:Run|}(int firstCount, int secondCount, CancellationToken cancellationToken)
+                {
+                    for (var i = 0; i < firstCount; i++)
+                    {
+                        DoWork(i);
+                    }
+
+                    for (var i = 0; i < secondCount; i++)
+                    {
+                        cancellationToken.ThrowIfCancellationRequested();
+
+                        DoWork(i);
+                    }
+                }
+
+                private static void DoWork(int value) { }
+            }
+            """
+        );
+
+    [Test]
+    public Task NestedForLoops_CheckMissingEntirely_Reports() =>
+        CSharpAnalyzerVerifier<RequireCancellationCheckAnalyzer>.VerifyAnalyzerAsync(
+            """
+            using System.Threading;
+
+            public sealed class Sample
+            {
+                public void {|NE0009:Run|}(int rows, int columns, CancellationToken cancellationToken)
+                {
+                    for (var row = 0; row < rows; row++)
+                    {
+                        for (var column = 0; column < columns; column++)
+                        {
+                            DoWork(row, column);
+                        }
+                    }
+                }
+
+                private static void DoWork(int row, int column) { }
+            }
+            """
+        );
+
     [Test]
     public Task IsCancellationRequestedLookalikeOnNonTokenType_NoMatch_Reports() =>
         CSharpAnalyzerVerifier<RequireCancellationCheckAnalyzer>.VerifyAnalyzerAsync(

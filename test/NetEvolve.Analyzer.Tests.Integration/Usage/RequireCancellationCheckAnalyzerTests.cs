@@ -1,4 +1,4 @@
-namespace NetEvolve.Analyzer.Tests.Integration.Usage;
+﻿namespace NetEvolve.Analyzer.Tests.Integration.Usage;
 
 using System;
 using System.Linq;
@@ -140,6 +140,68 @@ public sealed class RequireCancellationCheckAnalyzerTests
             public sealed class Sample
             {
                 public Task RunAsync(CancellationToken cancellationToken) => Task.CompletedTask;
+            }
+            """;
+
+        var diagnostics = await AnalyzerCompiler
+            .GetAnalyzerDiagnosticsAsync(source, new RequireCancellationCheckAnalyzer())
+            .ConfigureAwait(false);
+
+        await Assert.That(diagnostics.Any(IsNe0009)).IsFalse();
+    }
+
+    [Test]
+    public async Task NestedForLoopsMissingCheck_ReportsNe0009()
+    {
+        const string source = """
+            using System.Threading;
+
+            public sealed class Sample
+            {
+                public void Run(int rows, int columns, CancellationToken cancellationToken)
+                {
+                    for (var row = 0; row < rows; row++)
+                    {
+                        for (var column = 0; column < columns; column++)
+                        {
+                            DoWork(row, column);
+                        }
+                    }
+                }
+
+                private static void DoWork(int row, int column) { }
+            }
+            """;
+
+        var diagnostics = await AnalyzerCompiler
+            .GetAnalyzerDiagnosticsAsync(source, new RequireCancellationCheckAnalyzer())
+            .ConfigureAwait(false);
+
+        await Assert.That(diagnostics.Count(IsNe0009)).IsEqualTo(1);
+    }
+
+    [Test]
+    public async Task NestedForLoopsWithLeadingCheckInInnermost_ReportsNothing()
+    {
+        const string source = """
+            using System.Threading;
+
+            public sealed class Sample
+            {
+                public void Run(int rows, int columns, CancellationToken cancellationToken)
+                {
+                    for (var row = 0; row < rows; row++)
+                    {
+                        cancellationToken.ThrowIfCancellationRequested();
+
+                        for (var column = 0; column < columns; column++)
+                        {
+                            DoWork(row, column);
+                        }
+                    }
+                }
+
+                private static void DoWork(int row, int column) { }
             }
             """;
 

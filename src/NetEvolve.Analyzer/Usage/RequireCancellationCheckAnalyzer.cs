@@ -13,10 +13,14 @@ using Microsoft.CodeAnalysis.Diagnostics;
 /// parameter but does not check for cancellation as the first statement of its body (immediately after any
 /// leading argument-validation guard clauses). Either <c>token.ThrowIfCancellationRequested()</c> or
 /// <c>if (token.IsCancellationRequested) { return ...; }</c> (or, inside an iterator method,
-/// <c>if (token.IsCancellationRequested) { yield break; }</c>) satisfies the rule. Expression-bodied methods are
-/// skipped, since they cannot structurally hold a guard statement; methods without a body (interface members,
-/// abstract, extern, or partial declarations without an implementation) are skipped as well, since there is no
-/// body to check. Only <see cref="MethodDeclarationSyntax"/> is inspected; local functions are not.
+/// <c>if (token.IsCancellationRequested) { yield break; }</c>) satisfies the rule. If that first statement is
+/// itself a <see langword="for"/>/<see langword="foreach"/>/<see langword="while"/>/<see langword="do"/> loop,
+/// the same check is accepted as the first statement of the loop's body instead, and so on through any further
+/// nesting — a loop-of-loops is satisfied as soon as one nesting level's leading statement is the check.
+/// Expression-bodied methods are skipped, since they cannot structurally hold a
+/// guard statement; methods without a body (interface members, abstract, extern, or partial declarations
+/// without an implementation) are skipped as well, since there is no body to check. Only
+/// <see cref="MethodDeclarationSyntax"/> is inspected; local functions are not.
 /// </summary>
 [DiagnosticAnalyzer(LanguageNames.CSharp)]
 public sealed class RequireCancellationCheckAnalyzer : DiagnosticAnalyzer
@@ -104,7 +108,8 @@ public sealed class RequireCancellationCheckAnalyzer : DiagnosticAnalyzer
 
     /// <summary>
     /// Walks the leading argument-validation guard clauses and checks whether the first non-guard statement is
-    /// a cancellation check against one of <paramref name="tokenNames"/>.
+    /// a cancellation check against one of <paramref name="tokenNames"/> — see
+    /// <see cref="IsCheckOrLeadingLoopCheck"/> for what counts as a match.
     /// </summary>
     private static bool HasLeadingCancellationCheck(
         SemanticModel semanticModel,
@@ -119,13 +124,59 @@ public sealed class RequireCancellationCheckAnalyzer : DiagnosticAnalyzer
                 continue;
             }
 
-            return IsThrowIfCancellationRequested(statement, tokenNames)
-                || IsIsCancellationRequestedReturn(statement, tokenNames);
+            return IsCheckOrLeadingLoopCheck(statement, tokenNames);
         }
 
         // Every statement was a guard clause (or the body is empty): there is no statement left to hold the
         // cancellation check.
         return false;
+    }
+
+    /// <summary>
+    /// Whether <paramref name="statement"/> is itself a cancellation check against one of
+    /// <paramref name="tokenNames"/> — or, if it is a <see langword="for"/>/<see langword="foreach"/>/
+    /// <see langword="while"/>/<see langword="do"/> loop, whether the first statement of its body is (checked
+    /// recursively, so a loop nested at any depth is matched as long as its leading statement is the check).
+    /// </summary>
+    private static bool IsCheckOrLeadingLoopCheck(StatementSyntax statement, ImmutableArray<string> tokenNames)
+    {
+        if (
+            IsThrowIfCancellationRequested(statement, tokenNames)
+            || IsIsCancellationRequestedReturn(statement, tokenNames)
+        )
+        {
+            return true;
+        }
+
+        var loopBodyStatement = GetFirstLoopBodyStatement(statement);
+        return loopBodyStatement is not null && IsCheckOrLeadingLoopCheck(loopBodyStatement, tokenNames);
+    }
+
+    /// <summary>
+    /// The first statement of <paramref name="statement"/>'s embedded body, if it is a <see langword="for"/>,
+    /// <see langword="foreach"/>, <see langword="while"/>, or <see langword="do"/> loop; <see langword="null"/>
+    /// otherwise (including an empty loop body). Only one nesting level is unwrapped per call — the caller,
+    /// <see cref="IsCheckOrLeadingLoopCheck"/>, recurses to reach further nesting.
+    /// </summary>
+    private static StatementSyntax? GetFirstLoopBodyStatement(StatementSyntax statement)
+    {
+        var body = statement switch
+        {
+            ForStatementSyntax forStatement => forStatement.Statement,
+            ForEachStatementSyntax forEachStatement => forEachStatement.Statement,
+            ForEachVariableStatementSyntax forEachVariableStatement => forEachVariableStatement.Statement,
+            WhileStatementSyntax whileStatement => whileStatement.Statement,
+            DoStatementSyntax doStatement => doStatement.Statement,
+            _ => null,
+        };
+
+        return body switch
+        {
+            null => null,
+            BlockSyntax { Statements.Count: > 0 } block => block.Statements[0],
+            BlockSyntax => null,
+            _ => body,
+        };
     }
 
     /// <summary>

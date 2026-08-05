@@ -1,4 +1,4 @@
-namespace NetEvolve.Analyzer.Tests.Unit.Usage;
+﻿namespace NetEvolve.Analyzer.Tests.Unit.Usage;
 
 using System.Threading.Tasks;
 using Microsoft.CodeAnalysis.CSharp;
@@ -86,6 +86,54 @@ public sealed class RequireCancellationCheckCodeFixTests
                 }
 
                 private static void DoWork(object value) { }
+            }
+            """,
+            ThrowIfCancellationRequestedKey
+        );
+
+    [Test]
+    public Task NestedForLoopsMissingCheck_AddsThrowIfCancellationRequestedBeforeOuterLoop() =>
+        RequireCancellationCheckCodeFixVerifier<
+            RequireCancellationCheckAnalyzer,
+            RequireCancellationCheckCodeFixProvider
+        >.VerifyCodeFixAsync(
+            """
+            using System.Threading;
+
+            public sealed class Sample
+            {
+                public void {|NE0009:Run|}(int rows, int columns, CancellationToken cancellationToken)
+                {
+                    for (var row = 0; row < rows; row++)
+                    {
+                        for (var column = 0; column < columns; column++)
+                        {
+                            DoWork(row, column);
+                        }
+                    }
+                }
+
+                private static void DoWork(int row, int column) { }
+            }
+            """,
+            """
+            using System.Threading;
+
+            public sealed class Sample
+            {
+                public void Run(int rows, int columns, CancellationToken cancellationToken)
+                {
+                    cancellationToken.ThrowIfCancellationRequested();
+                    for (var row = 0; row < rows; row++)
+                    {
+                        for (var column = 0; column < columns; column++)
+                        {
+                            DoWork(row, column);
+                        }
+                    }
+                }
+
+                private static void DoWork(int row, int column) { }
             }
             """,
             ThrowIfCancellationRequestedKey
