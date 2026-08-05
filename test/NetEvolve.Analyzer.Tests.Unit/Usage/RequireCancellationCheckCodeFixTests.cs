@@ -40,6 +40,7 @@ public sealed class RequireCancellationCheckCodeFixTests
                 public void Run(CancellationToken cancellationToken)
                 {
                     cancellationToken.ThrowIfCancellationRequested();
+
                     DoWork();
                 }
 
@@ -82,6 +83,7 @@ public sealed class RequireCancellationCheckCodeFixTests
                     if (value is null)
                         throw new ArgumentNullException(nameof(value));
                     cancellationToken.ThrowIfCancellationRequested();
+
                     DoWork(value);
                 }
 
@@ -124,6 +126,7 @@ public sealed class RequireCancellationCheckCodeFixTests
                 public void Run(int rows, int columns, CancellationToken cancellationToken)
                 {
                     cancellationToken.ThrowIfCancellationRequested();
+
                     for (var row = 0; row < rows; row++)
                     {
                         for (var column = 0; column < columns; column++)
@@ -171,6 +174,7 @@ public sealed class RequireCancellationCheckCodeFixTests
                     {
                         return;
                     }
+
                     DoWork();
                 }
 
@@ -212,6 +216,7 @@ public sealed class RequireCancellationCheckCodeFixTests
                     {
                         return;
                     }
+
                     await DoWorkAsync().ConfigureAwait(false);
                 }
 
@@ -249,6 +254,7 @@ public sealed class RequireCancellationCheckCodeFixTests
                     {
                         return default;
                     }
+
                     return 42;
                 }
             }
@@ -295,6 +301,7 @@ public sealed class RequireCancellationCheckCodeFixTests
                     {
                         return [];
                     }
+
                     return new List<int> { 42 };
                 }
             }
@@ -331,6 +338,7 @@ public sealed class RequireCancellationCheckCodeFixTests
                     {
                         return [];
                     }
+
                     return new[] { 42 };
                 }
             }
@@ -373,6 +381,7 @@ public sealed class RequireCancellationCheckCodeFixTests
                     {
                         return [];
                     }
+
                     return await LoadAsync().ConfigureAwait(false);
                 }
 
@@ -414,6 +423,7 @@ public sealed class RequireCancellationCheckCodeFixTests
                     {
                         return default;
                     }
+
                     return new List<int> { 42 };
                 }
             }
@@ -454,6 +464,7 @@ public sealed class RequireCancellationCheckCodeFixTests
                     {
                         return default;
                     }
+
                     return Factory();
                 }
 
@@ -495,6 +506,7 @@ public sealed class RequireCancellationCheckCodeFixTests
                     {
                         yield break;
                     }
+
                     yield return 42;
                 }
             }
@@ -541,6 +553,7 @@ public sealed class RequireCancellationCheckCodeFixTests
                         throw new ArgumentNullException(nameof(value));
                     }
                     cancellationToken.ThrowIfCancellationRequested();
+
                     DoWork(value);
                 }
 
@@ -583,6 +596,7 @@ public sealed class RequireCancellationCheckCodeFixTests
                 public void Run(object value, CancellationToken cancellationToken)
                 {
                     cancellationToken.ThrowIfCancellationRequested();
+
                     if (value is null)
                         throw GetException();
                     DoWork(value);
@@ -627,6 +641,7 @@ public sealed class RequireCancellationCheckCodeFixTests
                 {
                     ArgumentNullException.ThrowIfNull(value);
                     cancellationToken.ThrowIfCancellationRequested();
+
                     DoWork(value);
                 }
 
@@ -659,6 +674,7 @@ public sealed class RequireCancellationCheckCodeFixTests
                 public void Run(System.Threading.CancellationToken cancellationToken)
                 {
                     cancellationToken.ThrowIfCancellationRequested();
+
                     DoWork();
                 }
 
