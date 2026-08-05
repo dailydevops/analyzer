@@ -5,6 +5,7 @@ using System.Threading;
 using System.Threading.Tasks;
 using Microsoft.CodeAnalysis.CSharp.Testing;
 using Microsoft.CodeAnalysis.Testing;
+using NetEvolve.Analyzer;
 using NetEvolve.Analyzer.Documentation;
 using NetEvolve.Analyzer.Tests.Unit.Verifiers;
 using TUnit.Assertions;
@@ -202,6 +203,46 @@ public sealed class NativeTypeCrefAnalyzerTests
         };
 
         await test.RunAsync(CancellationToken.None).ConfigureAwait(false);
+    }
+
+    // ---- Multi-targeting: each TFM's compilation is analyzed independently, with no state bleeding between
+    // them — the recognized-type set is computed fresh per CompilationStartAction, not cached statically. A
+    // multi-targeted consumer project builds one Compilation per TargetFramework, so running the analyzer
+    // against each TFM's own reference assemblies (as done here) is exactly what happens in that build.
+
+    [Test]
+    public async Task MultiTargetedProject_EachTargetFrameworkAnalyzedOnItsOwnMerits()
+    {
+        const string source = """
+            public sealed class Sample
+            {
+                /// <summary>Gets the <c>DateOnly</c> value.</summary>
+                public string Value => "DateOnly";
+            }
+            """;
+
+        var net80Test = new CSharpAnalyzerTest<NativeTypeCrefAnalyzer, DefaultVerifier>
+        {
+            TestCode = source,
+            ReferenceAssemblies = ReferenceAssemblies.Net.Net80,
+        };
+        net80Test.ExpectedDiagnostics.Add(
+            CSharpAnalyzerVerifier<NativeTypeCrefAnalyzer>
+                .Diagnostic(DiagnosticIds.NE0008)
+                .WithSpan(3, 27, 3, 42)
+                .WithArguments("DateOnly", "c")
+        );
+
+        var netStandardTest = new CSharpAnalyzerTest<NativeTypeCrefAnalyzer, DefaultVerifier>
+        {
+            TestCode = source,
+            ReferenceAssemblies = ReferenceAssemblies.NetStandard.NetStandard20,
+        };
+
+        // Order matters here: the netstandard2.0 run executes first so a static/shared cache leaking the
+        // net8.0 result forward would surface as a false positive on the framework that has no DateOnly type.
+        await netStandardTest.RunAsync(CancellationToken.None).ConfigureAwait(false);
+        await net80Test.RunAsync(CancellationToken.None).ConfigureAwait(false);
     }
 
     // ---- Negative: void is excluded, it's handled by NE0007 instead ----------------------------------------
