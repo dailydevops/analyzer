@@ -396,7 +396,49 @@ public sealed class RequireCancellationCheckAnalyzerTests
             """
         );
 
+    [Test]
+    public Task ForEachVariableLoopFirstStatementThrowIfCancellationRequested_NoDiagnostic() =>
+        CSharpAnalyzerVerifier<RequireCancellationCheckAnalyzer>.VerifyAnalyzerAsync(
+            """
+            using System.Collections.Generic;
+            using System.Threading;
+
+            public sealed class Sample
+            {
+                public void Run(IEnumerable<(int Row, int Column)> items, CancellationToken cancellationToken)
+                {
+                    foreach (var (row, column) in items)
+                    {
+                        cancellationToken.ThrowIfCancellationRequested();
+
+                        DoWork(row, column);
+                    }
+                }
+
+                private static void DoWork(int row, int column) { }
+            }
+            """
+        );
+
     // ---- Positive: a loop whose first statement is not the check is still flagged -------------------------
+
+    [Test]
+    public Task ForLoopEmptyBody_MissingCheck_Reports() =>
+        CSharpAnalyzerVerifier<RequireCancellationCheckAnalyzer>.VerifyAnalyzerAsync(
+            """
+            using System.Threading;
+
+            public sealed class Sample
+            {
+                public void {|NE0009:Run|}(int count, CancellationToken cancellationToken)
+                {
+                    for (var i = 0; i < count; i++)
+                    {
+                    }
+                }
+            }
+            """
+        );
 
     [Test]
     public Task ForLoopFirstStatementMissingCheck_Reports() =>
