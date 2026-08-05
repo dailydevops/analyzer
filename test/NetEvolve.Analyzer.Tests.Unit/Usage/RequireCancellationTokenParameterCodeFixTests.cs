@@ -554,4 +554,142 @@ public sealed class RequireCancellationTokenParameterCodeFixTests
             }
             """
         );
+
+    [Test]
+    public Task CallWithExistingNamedArgument_IsLeftUnchanged() =>
+        CSharpCodeFixVerifier<
+            RequireCancellationTokenParameterAnalyzer,
+            RequireCancellationTokenParameterCodeFixProvider
+        >.VerifyCodeFixAsync(
+            """
+            using System.Threading;
+            using System.Threading.Tasks;
+
+            public sealed class Sample
+            {
+                public Task {|NE0010:Run|}(int value)
+                {
+                    HelperAsync(value: value);
+                    return OtherAsync();
+                }
+
+                private static Task HelperAsync(int value, CancellationToken token = default) => Task.CompletedTask;
+
+                private static Task OtherAsync(CancellationToken token = default) => Task.CompletedTask;
+            }
+            """,
+            """
+            using System.Threading;
+            using System.Threading.Tasks;
+
+            public sealed class Sample
+            {
+                public Task Run(int value, CancellationToken cancellationToken = default)
+                {
+                    HelperAsync(value: value);
+                    return OtherAsync(token: cancellationToken);
+                }
+
+                private static Task HelperAsync(int value, CancellationToken token = default) => Task.CompletedTask;
+
+                private static Task OtherAsync(CancellationToken token = default) => Task.CompletedTask;
+            }
+            """
+        );
+
+    [Test]
+    public Task CallToMethodWithAmbiguousCancellationTokenParameters_IsLeftUnchanged() =>
+        CSharpCodeFixVerifier<
+            RequireCancellationTokenParameterAnalyzer,
+            RequireCancellationTokenParameterCodeFixProvider
+        >.VerifyCodeFixAsync(
+            """
+            using System.Threading;
+            using System.Threading.Tasks;
+
+            public sealed class Sample
+            {
+                public Task {|NE0010:Run|}(int value)
+                {
+                    HelperAsync(value);
+                    return OtherAsync();
+                }
+
+                private static Task HelperAsync(
+                    int value,
+                    CancellationToken token1 = default,
+                    CancellationToken token2 = default
+                ) => Task.CompletedTask;
+
+                private static Task OtherAsync(CancellationToken token = default) => Task.CompletedTask;
+            }
+            """,
+            """
+            using System.Threading;
+            using System.Threading.Tasks;
+
+            public sealed class Sample
+            {
+                public Task Run(int value, CancellationToken cancellationToken = default)
+                {
+                    HelperAsync(value);
+                    return OtherAsync(token: cancellationToken);
+                }
+
+                private static Task HelperAsync(
+                    int value,
+                    CancellationToken token1 = default,
+                    CancellationToken token2 = default
+                ) => Task.CompletedTask;
+
+                private static Task OtherAsync(CancellationToken token = default) => Task.CompletedTask;
+            }
+            """
+        );
+
+    [Test]
+    public Task CallToMethodWithSiblingOverloadAddingUnrelatedParameter_IsLeftUnchanged() =>
+        CSharpCodeFixVerifier<
+            RequireCancellationTokenParameterAnalyzer,
+            RequireCancellationTokenParameterCodeFixProvider
+        >.VerifyCodeFixAsync(
+            """
+            using System.Threading;
+            using System.Threading.Tasks;
+
+            public sealed class Sample
+            {
+                public Task {|NE0010:Run|}(int value)
+                {
+                    HelperAsync(value);
+                    return OtherAsync();
+                }
+
+                private static void HelperAsync(int value) { }
+
+                private static Task HelperAsync(int value, bool flag) => Task.CompletedTask;
+
+                private static Task OtherAsync(CancellationToken token = default) => Task.CompletedTask;
+            }
+            """,
+            """
+            using System.Threading;
+            using System.Threading.Tasks;
+
+            public sealed class Sample
+            {
+                public Task Run(int value, CancellationToken cancellationToken = default)
+                {
+                    HelperAsync(value);
+                    return OtherAsync(token: cancellationToken);
+                }
+
+                private static void HelperAsync(int value) { }
+
+                private static Task HelperAsync(int value, bool flag) => Task.CompletedTask;
+
+                private static Task OtherAsync(CancellationToken token = default) => Task.CompletedTask;
+            }
+            """
+        );
 }
