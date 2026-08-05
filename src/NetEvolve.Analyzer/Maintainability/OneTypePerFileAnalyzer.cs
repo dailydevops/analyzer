@@ -7,6 +7,7 @@ using System.Globalization;
 using System.IO;
 using System.Linq;
 using Microsoft.CodeAnalysis;
+using Microsoft.CodeAnalysis.CSharp;
 using Microsoft.CodeAnalysis.CSharp.Syntax;
 using Microsoft.CodeAnalysis.Diagnostics;
 
@@ -141,7 +142,18 @@ public sealed class OneTypePerFileAnalyzer : DiagnosticAnalyzer
 
     private static bool IsTopLevelTypeDeclaration(SyntaxNode node) =>
         node is BaseTypeDeclarationSyntax or DelegateDeclarationSyntax
-        && node.Parent is BaseNamespaceDeclarationSyntax or CompilationUnitSyntax;
+        && node.Parent is BaseNamespaceDeclarationSyntax or CompilationUnitSyntax
+        && !HasFileModifier(node);
+
+    // File-scoped types (the `file` modifier, C# 11+) are invisible outside their own file by design, so
+    // NE0001's "one type per file" / "file name matches type" rules don't apply to them — skip them entirely.
+    private static bool HasFileModifier(SyntaxNode node) =>
+        node switch
+        {
+            BaseTypeDeclarationSyntax type => type.Modifiers.Any(SyntaxKind.FileKeyword),
+            DelegateDeclarationSyntax @delegate => @delegate.Modifiers.Any(SyntaxKind.FileKeyword),
+            _ => false,
+        };
 
     private static bool GetBoolean(AnalyzerConfigOptions options, string key) =>
         options.TryGetValue(key, out var value) && string.Equals(value, "true", StringComparison.OrdinalIgnoreCase);
