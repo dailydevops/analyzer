@@ -49,19 +49,15 @@ internal static class CancellationTokenCallSites
     public static List<AppendableCallSite> CollectAppendableInvocations(
         SemanticModel semanticModel,
         MethodDeclarationSyntax method
-    ) => EnumerateAppendableInvocations(semanticModel, method).ToList();
-
-    private static IEnumerable<AppendableCallSite> EnumerateAppendableInvocations(
-        SemanticModel semanticModel,
-        MethodDeclarationSyntax method
     )
     {
         SyntaxNode? searchRoot = method.Body is not null ? method.Body : method.ExpressionBody?.Expression;
         if (searchRoot is null)
         {
-            yield break;
+            return [];
         }
 
+        var callSites = new List<AppendableCallSite>();
         foreach (
             var invocation in searchRoot
                 .DescendantNodesAndSelf(descendIntoChildren: IsNotNestedFunctionScope)
@@ -70,9 +66,11 @@ internal static class CancellationTokenCallSites
         {
             if (TryGetAppendableParameterName(semanticModel, invocation, out var parameterName))
             {
-                yield return new AppendableCallSite(invocation, parameterName!);
+                callSites.Add(new AppendableCallSite(invocation, parameterName!));
             }
         }
+
+        return callSites;
     }
 
     // Stops descent at a nested lambda/anonymous method/local function: a call inside one of those belongs to
