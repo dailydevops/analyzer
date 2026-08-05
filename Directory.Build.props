@@ -7,6 +7,8 @@
     <PackageReleaseNotes>$(PackageProjectUrl)/releases</PackageReleaseNotes>
     <PackageTags></PackageTags>
     <CopyrightYearStart>2024</CopyrightYearStart>
+
+    <DisableRecommendedPackage>NetEvolve.Analyzer</DisableRecommendedPackage>
   </PropertyGroup>
   <PropertyGroup>
     <!-- Workaround, until https://github.com/GitTools/GitVersion/pull/4206 is released -->
