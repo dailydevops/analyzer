@@ -168,15 +168,28 @@ internal static class CSharpKeywords
     /// Common BCL value types that, like <see cref="NativeTypeKeywords"/>, are frequently misdocumented as
     /// <c>&lt;c&gt;type&lt;/c&gt;</c> instead of <c>&lt;see cref="type"/&gt;</c>. These are ordinary types, not
     /// C# keywords — a bare reference resolves via <c>&lt;see cref="..."/&gt;</c> the same way any other type
-    /// name does, as long as it is in scope.
+    /// name does, as long as it is in scope. <c>DateOnly</c>/<c>TimeOnly</c> are deliberately excluded here —
+    /// see <see cref="ConditionalBclTypeNames"/> — since they only exist on the target frameworks that ship
+    /// them.
     /// </summary>
     public static readonly ImmutableHashSet<string> WellKnownBclTypeNames = ImmutableHashSet.Create(
         StringComparer.Ordinal,
         "Guid",
         "DateTime",
         "DateTimeOffset",
-        "DateOnly",
-        "TimeOnly",
         "TimeSpan"
+    );
+
+    /// <summary>
+    /// BCL value types that, unlike <see cref="WellKnownBclTypeNames"/>, are not available on every target
+    /// framework the analyzer itself must run on (<c>netstandard2.0</c>) — <c>DateOnly</c> and <c>TimeOnly</c>
+    /// were introduced in .NET 6. A consumer targeting an older framework has no such type to <c>cref</c> in
+    /// the first place, so callers must only include these once the compilation is confirmed to have the type
+    /// in scope (e.g. via <c>Compilation.GetTypeByMetadataName</c>), rather than adding them unconditionally.
+    /// </summary>
+    public static readonly ImmutableHashSet<string> ConditionalBclTypeNames = ImmutableHashSet.Create(
+        StringComparer.Ordinal,
+        "DateOnly",
+        "TimeOnly"
     );
 }

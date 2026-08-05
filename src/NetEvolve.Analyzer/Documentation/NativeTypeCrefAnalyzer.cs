@@ -13,16 +13,18 @@ using NetEvolve.Analyzer.Helpers;
 /// NE0008 — reports a <c>&lt;c&gt;</c> or <c>&lt;code&gt;</c> element inside an XML doc comment whose entire
 /// content is a single recognized native/predefined C# type name (<see cref="CSharpKeywords.NativeTypeKeywords"/>)
 /// or common BCL value type name (<see cref="CSharpKeywords.WellKnownBclTypeNames"/> — <c>Guid</c>,
-/// <c>DateTime</c>, <c>DateTimeOffset</c>, <c>DateOnly</c>, <c>TimeOnly</c>, <c>TimeSpan</c>), which should
-/// instead use <c>&lt;see cref="..."/&gt;</c>. The whole documentation-comment tree of a member is inspected,
-/// not just <c>&lt;summary&gt;</c> — the same mistake is equally possible in <c>&lt;param&gt;</c>,
-/// <c>&lt;returns&gt;</c>, <c>&lt;value&gt;</c>, <c>&lt;exception&gt;</c>, <c>&lt;remarks&gt;</c>, and
-/// <c>&lt;typeparam&gt;</c>.
+/// <c>DateTime</c>, <c>DateTimeOffset</c>, <c>TimeSpan</c>), which should instead use
+/// <c>&lt;see cref="..."/&gt;</c>. <c>DateOnly</c>/<c>TimeOnly</c> (<see cref="CSharpKeywords.ConditionalBclTypeNames"/>)
+/// join the recognized set only when the compilation actually has the type in scope — a consumer targeting a
+/// framework older than .NET 6 has no such type to <c>cref</c>, so flagging it there would be wrong. The whole
+/// documentation-comment tree of a member is inspected, not just <c>&lt;summary&gt;</c> — the same mistake is
+/// equally possible in <c>&lt;param&gt;</c>, <c>&lt;returns&gt;</c>, <c>&lt;value&gt;</c>,
+/// <c>&lt;exception&gt;</c>, <c>&lt;remarks&gt;</c>, and <c>&lt;typeparam&gt;</c>.
 /// </summary>
 [DiagnosticAnalyzer(LanguageNames.CSharp)]
 public sealed class NativeTypeCrefAnalyzer : DiagnosticAnalyzer
 {
-    private static readonly ImmutableHashSet<string> RecognizedTypeNames = CSharpKeywords.NativeTypeKeywords.Union(
+    private static readonly ImmutableHashSet<string> BaseRecognizedTypeNames = CSharpKeywords.NativeTypeKeywords.Union(
         CSharpKeywords.WellKnownBclTypeNames
     );
 
@@ -40,10 +42,25 @@ public sealed class NativeTypeCrefAnalyzer : DiagnosticAnalyzer
 
         context.EnableConcurrentExecution();
         context.ConfigureGeneratedCodeAnalysis(GeneratedCodeAnalysisFlags.None);
-        context.RegisterSyntaxTreeAction(AnalyzeTree);
+        context.RegisterCompilationStartAction(AnalyzeCompilationStart);
     }
 
-    private static void AnalyzeTree(SyntaxTreeAnalysisContext context)
+    private static void AnalyzeCompilationStart(CompilationStartAnalysisContext context)
+    {
+        var recognizedTypeNames = HasConditionalBclType(context.Compilation)
+            ? BaseRecognizedTypeNames.Union(CSharpKeywords.ConditionalBclTypeNames)
+            : BaseRecognizedTypeNames;
+
+        context.RegisterSyntaxTreeAction(treeContext => AnalyzeTree(treeContext, recognizedTypeNames));
+    }
+
+    // DateOnly and TimeOnly only exist from .NET 6 onward; a compilation targeting an older framework has
+    // neither type in scope, so treating their bare names as a doc-comment mistake there would be wrong.
+    // Checking one is enough — both shipped together in the same release.
+    private static bool HasConditionalBclType(Compilation compilation) =>
+        compilation.GetTypeByMetadataName("System.DateOnly") is not null;
+
+    private static void AnalyzeTree(SyntaxTreeAnalysisContext context, ImmutableHashSet<string> recognizedTypeNames)
     {
         var root = context.Tree.GetRoot(context.CancellationToken);
 
@@ -64,19 +81,23 @@ public sealed class NativeTypeCrefAnalyzer : DiagnosticAnalyzer
 
             foreach (var element in documentationComment.DescendantNodes().OfType<XmlElementSyntax>())
             {
-                AnalyzeElement(context, element);
+                AnalyzeElement(context, element, recognizedTypeNames);
             }
         }
     }
 
-    private static void AnalyzeElement(SyntaxTreeAnalysisContext context, XmlElementSyntax element)
+    private static void AnalyzeElement(
+        SyntaxTreeAnalysisContext context,
+        XmlElementSyntax element,
+        ImmutableHashSet<string> recognizedTypeNames
+    )
     {
         if (!IsCOrCodeElement(element))
         {
             return;
         }
 
-        var typeName = GetSoleNativeTypeContent(element);
+        var typeName = GetSoleNativeTypeContent(element, recognizedTypeNames);
         if (typeName is null)
         {
             return;
@@ -96,7 +117,10 @@ public sealed class NativeTypeCrefAnalyzer : DiagnosticAnalyzer
     // Only a <c>/<code> element whose entire trimmed content is exactly one recognized native type name
     // qualifies; a code snippet, expression, or any surrounding prose is left alone because it is not a bare
     // type-name reference.
-    private static string? GetSoleNativeTypeContent(XmlElementSyntax element)
+    private static string? GetSoleNativeTypeContent(
+        XmlElementSyntax element,
+        ImmutableHashSet<string> recognizedTypeNames
+    )
     {
         if (element.Content.Count != 1 || element.Content[0] is not XmlTextSyntax text)
         {
@@ -105,6 +129,6 @@ public sealed class NativeTypeCrefAnalyzer : DiagnosticAnalyzer
 
         var content = string.Concat(text.TextTokens.Select(token => token.ValueText)).Trim();
 
-        return RecognizedTypeNames.Contains(content) ? content : null;
+        return recognizedTypeNames.Contains(content) ? content : null;
     }
 }
