@@ -15,7 +15,7 @@ internal static class CSharpKeywords
     /// Keywords that are reserved everywhere; an identifier with the same spelling requires the <c>@</c>
     /// prefix (<c>@class</c>). Native type names (<c>bool</c>, <c>byte</c>, <c>char</c>, ...) are
     /// intentionally excluded — referencing a type by its bare name in a doc comment is idiomatic and not
-    /// the keyword-in-<c>&lt;c&gt;</c> mistake this list exists to catch. <c>void</c> is kept, since it
+    /// the keyword-in-<c>&lt;c&gt;</c> mistake this list exists to catch. <see langword="void"/> is kept, since it
     /// denotes the absence of a return type rather than an actual type, and is commonly referenced the
     /// same way as <see langword="true"/>/<see langword="false"/>/<see langword="null"/>.
     /// </summary>
@@ -138,7 +138,7 @@ internal static class CSharpKeywords
 
     /// <summary>
     /// Native/predefined C# type names, deliberately excluded from <see cref="ReservedKeywords"/> and
-    /// <see cref="ContextualKeywords"/>. <c>void</c> is intentionally excluded here too — it denotes the
+    /// <see cref="ContextualKeywords"/>. <see langword="void"/> is intentionally excluded here too — it denotes the
     /// absence of a return type rather than an actual type, and stays classified under
     /// <see cref="ReservedKeywords"/>.
     /// </summary>

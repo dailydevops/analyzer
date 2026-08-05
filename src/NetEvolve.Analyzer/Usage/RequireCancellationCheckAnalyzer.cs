@@ -181,7 +181,7 @@ public sealed class RequireCancellationCheckAnalyzer : DiagnosticAnalyzer
 
     /// <summary>
     /// Whether <paramref name="statement"/> is a leading argument-validation guard clause: either an
-    /// <c>if</c>-statement whose sole statement throws an exception that is or derives from
+    /// <see langword="if"/>-statement whose sole statement throws an exception that is or derives from
     /// <see cref="System.ArgumentException"/>, or a call to a static <c>ThrowIfXxx</c> method on a type whose
     /// name ends with <c>Exception</c> (e.g. <c>ArgumentNullException.ThrowIfNull(...)</c>).
     /// </summary>

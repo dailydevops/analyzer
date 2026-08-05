@@ -14,7 +14,7 @@ using NetEvolve.Analyzer.Helpers;
 
 /// <summary>
 /// Code fix for <see cref="UseIsNotNullAnalyzer">NE0005</see>. Rewrites an inequality comparison against
-/// <c>null</c> into a pattern-based null check, choosing the form the project's language version supports:
+/// <see langword="null"/> into a pattern-based null check, choosing the form the project's language version supports:
 /// <c>x is not null</c> on C# 9.0 and later, otherwise <c>!(x is null)</c> on C# 7.0 and later. Below C# 7.0 no
 /// fix is offered — the diagnostic still stands, but no illegal pattern is emitted. Trivia from the original
 /// comparison is preserved.
