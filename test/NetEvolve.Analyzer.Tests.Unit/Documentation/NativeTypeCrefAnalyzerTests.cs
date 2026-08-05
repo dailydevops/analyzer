@@ -122,6 +122,36 @@ public sealed class NativeTypeCrefAnalyzerTests
             """
         );
 
+    // ---- Positive: common BCL value type names are flagged just like native types --------------------------
+
+    [Test]
+    public Task GuidTypeName_Reports() =>
+        CSharpAnalyzerVerifier<NativeTypeCrefAnalyzer>.VerifyAnalyzerAsync(
+            """
+            using System;
+
+            public sealed class Sample
+            {
+                /// <summary>Gets the {|NE0008:<c>Guid</c>|} value.</summary>
+                public Guid Value => Guid.Empty;
+            }
+            """
+        );
+
+    [Test]
+    public Task DateTimeTypeName_Reports() =>
+        CSharpAnalyzerVerifier<NativeTypeCrefAnalyzer>.VerifyAnalyzerAsync(
+            """
+            using System;
+
+            public sealed class Sample
+            {
+                /// <summary>Gets the {|NE0008:<c>DateTime</c>|} value.</summary>
+                public DateTime Value => DateTime.UtcNow;
+            }
+            """
+        );
+
     // ---- Negative: void is excluded, it's handled by NE0007 instead ----------------------------------------
 
     [Test]

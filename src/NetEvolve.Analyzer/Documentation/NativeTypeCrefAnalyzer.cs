@@ -11,15 +11,21 @@ using NetEvolve.Analyzer.Helpers;
 
 /// <summary>
 /// NE0008 — reports a <c>&lt;c&gt;</c> or <c>&lt;code&gt;</c> element inside an XML doc comment whose entire
-/// content is a single recognized native/predefined C# type name (<see cref="CSharpKeywords.NativeTypeKeywords"/>),
-/// which should instead use <c>&lt;see cref="..."/&gt;</c>. The whole documentation-comment tree of a member is
-/// inspected, not just <c>&lt;summary&gt;</c> — the same mistake is equally possible in <c>&lt;param&gt;</c>,
+/// content is a single recognized native/predefined C# type name (<see cref="CSharpKeywords.NativeTypeKeywords"/>)
+/// or common BCL value type name (<see cref="CSharpKeywords.WellKnownBclTypeNames"/> — <c>Guid</c>,
+/// <c>DateTime</c>, <c>DateTimeOffset</c>, <c>DateOnly</c>, <c>TimeOnly</c>, <c>TimeSpan</c>), which should
+/// instead use <c>&lt;see cref="..."/&gt;</c>. The whole documentation-comment tree of a member is inspected,
+/// not just <c>&lt;summary&gt;</c> — the same mistake is equally possible in <c>&lt;param&gt;</c>,
 /// <c>&lt;returns&gt;</c>, <c>&lt;value&gt;</c>, <c>&lt;exception&gt;</c>, <c>&lt;remarks&gt;</c>, and
 /// <c>&lt;typeparam&gt;</c>.
 /// </summary>
 [DiagnosticAnalyzer(LanguageNames.CSharp)]
 public sealed class NativeTypeCrefAnalyzer : DiagnosticAnalyzer
 {
+    private static readonly ImmutableHashSet<string> RecognizedTypeNames = CSharpKeywords.NativeTypeKeywords.Union(
+        CSharpKeywords.WellKnownBclTypeNames
+    );
+
     /// <inheritdoc />
     public override ImmutableArray<DiagnosticDescriptor> SupportedDiagnostics { get; } =
         ImmutableArray.Create(DiagnosticDescriptors.NativeTypeCref);
@@ -99,6 +105,6 @@ public sealed class NativeTypeCrefAnalyzer : DiagnosticAnalyzer
 
         var content = string.Concat(text.TextTokens.Select(token => token.ValueText)).Trim();
 
-        return CSharpKeywords.NativeTypeKeywords.Contains(content) ? content : null;
+        return RecognizedTypeNames.Contains(content) ? content : null;
     }
 }

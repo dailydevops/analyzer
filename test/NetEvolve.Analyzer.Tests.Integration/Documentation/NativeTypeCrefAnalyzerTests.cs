@@ -94,6 +94,26 @@ public sealed class NativeTypeCrefAnalyzerTests
     }
 
     [Test]
+    public async Task BareBclTypeNameInSummary_ReportsNe0008()
+    {
+        const string source = """
+            using System;
+
+            public sealed class Sample
+            {
+                /// <summary>Gets the <c>Guid</c> value.</summary>
+                public Guid Value => Guid.Empty;
+            }
+            """;
+
+        var diagnostics = await AnalyzerCompiler
+            .GetAnalyzerDiagnosticsAsync(source, new NativeTypeCrefAnalyzer())
+            .ConfigureAwait(false);
+
+        await Assert.That(diagnostics.Count(IsNe0008)).IsEqualTo(1);
+    }
+
+    [Test]
     public async Task VoidKeyword_ReportsNothing()
     {
         const string source = """

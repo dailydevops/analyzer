@@ -87,6 +87,29 @@ public sealed class NativeTypeCrefCodeFixTests
         );
 
     [Test]
+    public Task GuidTypeName_RewrittenToCref() =>
+        CSharpCodeFixVerifier<NativeTypeCrefAnalyzer, NativeTypeCrefCodeFixProvider>.VerifyCodeFixAsync(
+            """
+            using System;
+
+            public sealed class Sample
+            {
+                /// <summary>Gets the {|NE0008:<c>Guid</c>|} value.</summary>
+                public Guid Value => Guid.Empty;
+            }
+            """,
+            """
+            using System;
+
+            public sealed class Sample
+            {
+                /// <summary>Gets the <see cref="Guid"/> value.</summary>
+                public Guid Value => Guid.Empty;
+            }
+            """
+        );
+
+    [Test]
     public Task MultipleOccurrences_FixAllRewritesEveryOccurrence() =>
         CSharpCodeFixVerifier<NativeTypeCrefAnalyzer, NativeTypeCrefCodeFixProvider>.VerifyCodeFixAsync(
             """
