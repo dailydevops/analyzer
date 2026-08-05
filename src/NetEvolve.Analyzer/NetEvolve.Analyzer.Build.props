@@ -48,11 +48,18 @@
     <AdditionalFiles Include="AnalyzerReleases.Unshipped.md" />
   </ItemGroup>
 
-  <ItemGroup Label="Dogfooding: apply this analyzer's own rules to its own source" Condition=" '$(RoslynApiVersion)' != '4.14.0' ">
-    <!-- All four variants compile the same *.cs files; referencing the 4.14 baseline build's output as
-         an Analyzer here (instead of a normal ProjectReference) runs its diagnostics against that shared
-         source without creating a build cycle, since this targets a sibling project, never itself. The
-         4.14 variant is left unchecked by this mechanism, but the other three cover the identical code. -->
-    <ProjectReference Include="NetEvolve.Analyzer.Roslyn4_14.csproj" OutputItemType="Analyzer" ReferenceOutputAssembly="false" PrivateAssets="all" />
+  <ItemGroup Label="Dogfooding: apply this analyzer's own rules to its own source" Condition=" '$(MSBuildProjectName)' != 'NetEvolve.Analyzer.Dogfood' ">
+    <!-- All variants compile the same *.cs files; referencing NetEvolve.Analyzer.Dogfood's output as an
+         Analyzer here (instead of a normal ProjectReference) runs its diagnostics against that shared
+         source without creating a build cycle, since this targets a sibling project, never itself. That
+         dedicated project exists only because every real variant shares the assembly name
+         "NetEvolve.Analyzer" (see AssemblyName above); Visual Studio's analyzer/CodeFix MEF composition
+         silently drops the CodeFixProvider exports (diagnostics still work, but no lightbulb) when two
+         same-named assemblies from different paths load into the same solution — confirmed via an
+         isolated repro project referencing the plain DLL directly. A ProjectReference Properties=
+         "AssemblyName=..." override does not work around this: Visual Studio's Solution Build Manager
+         builds each project once and does not build parameterized instances of the same project file
+         the way `dotnet build`'s own reference-graph resolution does. -->
+    <ProjectReference Include="NetEvolve.Analyzer.Dogfood.csproj" OutputItemType="Analyzer" ReferenceOutputAssembly="false" />
   </ItemGroup>
 </Project>
