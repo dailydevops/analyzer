@@ -87,6 +87,19 @@ public sealed class OneTypePerFileAnalyzerTests
         );
 
     [Test]
+    public Task FileScopedDelegate_MismatchedName_IsIgnored_NoDiagnostic() =>
+        OneTypePerFileVerifier.VerifyAsync(
+            "Circle.cs",
+            """
+            namespace Geometry;
+
+            public sealed class Circle { }
+
+            file delegate void Helper();
+            """
+        );
+
+    [Test]
     public Task FileScopedType_Only_IsIgnored_NoDiagnostic() =>
         OneTypePerFileVerifier.VerifyAsync(
             "Circle.cs",

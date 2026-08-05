@@ -147,13 +147,10 @@ public sealed class OneTypePerFileAnalyzer : DiagnosticAnalyzer
 
     // File-scoped types (the `file` modifier, C# 11+) are invisible outside their own file by design, so
     // NE0001's "one type per file" / "file name matches type" rules don't apply to them — skip them entirely.
+    // The caller already guarantees node is one of these two syntax kinds, so no default arm is needed.
     private static bool HasFileModifier(SyntaxNode node) =>
-        node switch
-        {
-            BaseTypeDeclarationSyntax type => type.Modifiers.Any(SyntaxKind.FileKeyword),
-            DelegateDeclarationSyntax @delegate => @delegate.Modifiers.Any(SyntaxKind.FileKeyword),
-            _ => false,
-        };
+        (node as BaseTypeDeclarationSyntax)?.Modifiers.Any(SyntaxKind.FileKeyword)
+        ?? ((DelegateDeclarationSyntax)node).Modifiers.Any(SyntaxKind.FileKeyword);
 
     private static bool GetBoolean(AnalyzerConfigOptions options, string key) =>
         options.TryGetValue(key, out var value) && string.Equals(value, "true", StringComparison.OrdinalIgnoreCase);
