@@ -1,4 +1,4 @@
-namespace NetEvolve.Analyzer.Style;
+﻿namespace NetEvolve.Analyzer.Style;
 
 using System.Collections.Generic;
 using System.Collections.Immutable;
@@ -67,6 +67,8 @@ public sealed class AvoidRegionDirectivesCodeFixProvider : CodeFixProvider
         CancellationToken cancellationToken
     )
     {
+        cancellationToken.ThrowIfCancellationRequested();
+
         var text = await document.GetTextAsync(cancellationToken).ConfigureAwait(false);
         var lines = text.Lines;
 

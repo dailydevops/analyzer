@@ -1,4 +1,4 @@
-namespace NetEvolve.Analyzer.Usage;
+﻿namespace NetEvolve.Analyzer.Usage;
 
 using System.Collections.Immutable;
 using System.Composition;
@@ -14,7 +14,7 @@ using NetEvolve.Analyzer.Helpers;
 
 /// <summary>
 /// Code fix for <see cref="UseIsNotNullAnalyzer">NE0005</see>. Rewrites an inequality comparison against
-/// <c>null</c> into a pattern-based null check, choosing the form the project's language version supports:
+/// <see langword="null"/> into a pattern-based null check, choosing the form the project's language version supports:
 /// <c>x is not null</c> on C# 9.0 and later, otherwise <c>!(x is null)</c> on C# 7.0 and later. Below C# 7.0 no
 /// fix is offered — the diagnostic still stands, but no illegal pattern is emitted. Trivia from the original
 /// comparison is preserved.
@@ -65,6 +65,8 @@ public sealed class UseIsNotNullCodeFixProvider : CodeFixProvider
         CancellationToken cancellationToken
     )
     {
+        cancellationToken.ThrowIfCancellationRequested();
+
         var root = (await document.GetSyntaxRootAsync(cancellationToken).ConfigureAwait(false))!;
 
         // Re-find the comparison in the freshly fetched root so the replaced node belongs to that same tree.

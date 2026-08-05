@@ -1,0 +1,35 @@
+<Project>
+  <PropertyGroup>
+    <!-- Same source, same Roslyn baseline as NetEvolve.Analyzer.Roslyn4_14.csproj; exists solely so the
+         other three variants can reference a build of this analyzer under a DIFFERENT assembly name (see
+         AssemblyName override below and the "Dogfooding" ItemGroup in NetEvolve.Analyzer.Build.props).
+         Sharing the assembly name "NetEvolve.Analyzer" with the referencing project makes Visual Studio's
+         analyzer/CodeFix MEF composition silently drop the CodeFixProvider exports (diagnostics still
+         work, but no lightbulb) when two same-named assemblies from different paths load into the same
+         solution; a plain MSBuild global-property override (ProjectReference Properties="AssemblyName=...")
+         does not fix this, because Visual Studio's Solution Build Manager builds each project once and
+         does not build parameterized instances of the same project file the way `dotnet build`'s own
+         reference-graph resolution does. A distinct project file avoids that entirely. -->
+    <RoslynApiVersion>5.6.0</RoslynApiVersion>
+    <IsPackable>false</IsPackable>
+  </PropertyGroup>
+
+  <!-- BaseIntermediateOutputPath/BaseOutputPath must be set before Sdk.props is imported (MSB3539),
+       so this project can't use the <Project Sdk="Microsoft.NET.Sdk"> shorthand like its siblings. -->
+  <PropertyGroup>
+    <BaseIntermediateOutputPath>obj\$(MSBuildProjectName)\</BaseIntermediateOutputPath>
+    <BaseOutputPath>bin\$(MSBuildProjectName)\</BaseOutputPath>
+  </PropertyGroup>
+
+  <Import Project="Sdk.props" Sdk="Microsoft.NET.Sdk" />
+
+  <Import Project="NetEvolve.Analyzer.Build.props" />
+
+  <PropertyGroup>
+    <!-- Overrides the AssemblyName set by NetEvolve.Analyzer.Build.props above; never packed or shipped,
+         referenced only as an Analyzer item by the other three variants. -->
+    <AssemblyName>NetEvolve.Analyzer.Dogfood</AssemblyName>
+  </PropertyGroup>
+
+  <Import Project="Sdk.targets" Sdk="Microsoft.NET.Sdk" />
+</Project>

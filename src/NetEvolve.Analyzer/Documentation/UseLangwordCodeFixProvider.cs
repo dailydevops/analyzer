@@ -1,4 +1,4 @@
-namespace NetEvolve.Analyzer.Documentation;
+﻿namespace NetEvolve.Analyzer.Documentation;
 
 using System.Collections.Immutable;
 using System.Composition;
@@ -67,6 +67,8 @@ public sealed class UseLangwordCodeFixProvider : CodeFixProvider
         CancellationToken cancellationToken
     )
     {
+        cancellationToken.ThrowIfCancellationRequested();
+
         var text = await document.GetTextAsync(cancellationToken).ConfigureAwait(false);
         var newText = text.Replace(span, $"""<see langword="{keyword}"/>""");
 

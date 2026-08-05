@@ -5,7 +5,7 @@ using Microsoft.CodeAnalysis.Operations;
 
 /// <summary>
 /// Shared operand analysis for the null-check idiom rules (NE0004–NE0006). Determines whether an operand is the
-/// <c>null</c> literal and whether a pattern-based null check (<c>is null</c> / <c>is not null</c>) can legally
+/// <see langword="null"/> literal and whether a pattern-based null check (<c>is null</c> / <c>is not null</c>) can legally
 /// and equivalently replace a comparison against it. Pointer operands (for which the pattern does not compile)
 /// and non-nullable value types (for which the comparison is not a null check) are excluded here, so the
 /// analyzers never report a diagnostic that has no valid pattern form.
@@ -13,13 +13,13 @@ using Microsoft.CodeAnalysis.Operations;
 internal static class NullCheckOperand
 {
     /// <summary>
-    /// Whether <paramref name="operation"/>, after unwrapping an implicit conversion, is the <c>null</c> literal.
+    /// Whether <paramref name="operation"/>, after unwrapping an implicit conversion, is the <see langword="null"/> literal.
     /// </summary>
     public static bool IsNullLiteral(IOperation operation) =>
         Unwrap(operation) is ILiteralOperation { ConstantValue: { HasValue: true, Value: null } };
 
     /// <summary>
-    /// Whether a pattern-based null check can replace a comparison against <c>null</c> for
+    /// Whether a pattern-based null check can replace a comparison against <see langword="null"/> for
     /// <paramref name="operand"/>: its static type must be a non-pointer reference type, a
     /// <see cref="System.Nullable{T}"/>, or an unconstrained type parameter. Non-nullable value types and pointer
     /// types are rejected.
@@ -39,7 +39,7 @@ internal static class NullCheckOperand
 
     /// <summary>
     /// Whether <paramref name="operation"/> sits inside a LINQ expression-tree lambda (<c>Expression&lt;T&gt;</c>),
-    /// where the <c>is</c> pattern is not allowed and a rewrite would not compile.
+    /// where the <see langword="is"/> pattern is not allowed and a rewrite would not compile.
     /// </summary>
     public static bool IsWithinExpressionTree(IOperation operation)
     {

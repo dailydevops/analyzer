@@ -1,4 +1,4 @@
-namespace NetEvolve.Analyzer.Usage;
+﻿namespace NetEvolve.Analyzer.Usage;
 
 using System;
 using System.Collections.Immutable;
@@ -92,6 +92,8 @@ public sealed class RequireCancellationCheckCodeFixProvider : CodeFixProvider
         CancellationToken cancellationToken
     )
     {
+        cancellationToken.ThrowIfCancellationRequested();
+
         var root = (await document.GetSyntaxRootAsync(cancellationToken).ConfigureAwait(false))!;
         var current = root.FindNode(method.Span).AncestorsAndSelf().OfType<MethodDeclarationSyntax>().First();
 
@@ -230,6 +232,8 @@ public sealed class RequireCancellationCheckCodeFixProvider : CodeFixProvider
         CancellationToken cancellationToken
     )
     {
+        cancellationToken.ThrowIfCancellationRequested();
+
         var returnText = await GetReturnStatementTextAsync(document, method, cancellationToken).ConfigureAwait(false);
         return $"if ({tokenName}.IsCancellationRequested)\n{indentation}{{\n{indentation}    {returnText}\n{indentation}}}\n";
     }
@@ -280,6 +284,8 @@ public sealed class RequireCancellationCheckCodeFixProvider : CodeFixProvider
         CancellationToken cancellationToken
     )
     {
+        cancellationToken.ThrowIfCancellationRequested();
+
         if (IsIteratorMethod(method))
         {
             return "yield break;";

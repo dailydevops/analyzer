@@ -8,7 +8,7 @@ using Microsoft.CodeAnalysis.Operations;
 using NetEvolve.Analyzer.Helpers;
 
 /// <summary>
-/// NE0005 — reports an inequality comparison against <c>null</c> (<c>x != null</c> or <c>null != x</c>) that
+/// NE0005 — reports an inequality comparison against <see langword="null"/> (<c>x != null</c> or <c>null != x</c>) that
 /// should be written with the <c>is not null</c> pattern. The pattern always performs a null check and cannot be
 /// redefined by a user-defined <c>operator !=</c>, so it states the intent unambiguously. The comparison is only
 /// flagged when a pattern form is legal and equivalent: the non-null operand must be patternable (a non-pointer

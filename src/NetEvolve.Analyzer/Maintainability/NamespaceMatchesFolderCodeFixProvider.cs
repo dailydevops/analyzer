@@ -1,4 +1,4 @@
-namespace NetEvolve.Analyzer.Maintainability;
+﻿namespace NetEvolve.Analyzer.Maintainability;
 
 using System.Collections.Immutable;
 using System.Composition;
@@ -57,6 +57,8 @@ public sealed class NamespaceMatchesFolderCodeFixProvider : CodeFixProvider
         CancellationToken cancellationToken
     )
     {
+        cancellationToken.ThrowIfCancellationRequested();
+
         var root = (await document.GetSyntaxRootAsync(cancellationToken).ConfigureAwait(false))!;
 
         // Re-find the declaration in the freshly fetched root so the replaced node belongs to that same tree.

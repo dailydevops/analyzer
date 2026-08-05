@@ -1,4 +1,4 @@
-namespace NetEvolve.Analyzer.Usage;
+﻿namespace NetEvolve.Analyzer.Usage;
 
 using System.Collections.Immutable;
 using System.Composition;
@@ -65,6 +65,8 @@ public sealed class RequireCancellationTokenParameterCodeFixProvider : CodeFixPr
         CancellationToken cancellationToken
     )
     {
+        cancellationToken.ThrowIfCancellationRequested();
+
         var root = (CompilationUnitSyntax)(await document.GetSyntaxRootAsync(cancellationToken).ConfigureAwait(false))!;
 
         // Re-find the method in the freshly fetched root so the replaced node belongs to that same tree.

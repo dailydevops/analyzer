@@ -29,6 +29,7 @@
     <Project Path="src/NetEvolve.Analyzer/NetEvolve.Analyzer.Roslyn4_4.csproj" />
     <Project Path="src/NetEvolve.Analyzer/NetEvolve.Analyzer.Roslyn4_7.csproj" />
     <Project Path="src/NetEvolve.Analyzer/NetEvolve.Analyzer.Roslyn4_14.csproj" />
+    <Project Path="src/NetEvolve.Analyzer/NetEvolve.Analyzer.Dogfood.csproj" />
     <Project Path="src/NetEvolve.Analyzer/NetEvolve.Analyzer.Roslyn5_6.csproj" />
   </Folder>
   <Folder Name="/test/">
