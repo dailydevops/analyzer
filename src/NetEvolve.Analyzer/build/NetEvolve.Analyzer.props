@@ -10,4 +10,18 @@
     <CompilerVisibleProperty Include="RootNamespace" />
     <CompilerVisibleProperty Include="ProjectDir" />
   </ItemGroup>
+
+  <!--
+    NE0008 needs the project's full multi-targeting list to tell whether a DateOnly/TimeOnly cref is safe on
+    every target framework, not just the one currently compiling. $(TargetFrameworks) can't be exposed as-is:
+    Roslyn's AnalyzerConfig format treats an unescaped ';' as a comment leader, so a semicolon-separated value
+    silently truncates at the first entry once read back through AnalyzerConfigOptions. Re-joining it with ','
+    here — a character that never appears in a target framework moniker — sidesteps that entirely.
+  -->
+  <PropertyGroup Condition="'$(TargetFrameworks)' != ''">
+    <NetEvolveAnalyzerTargetFrameworks>$(TargetFrameworks.Replace(';', ','))</NetEvolveAnalyzerTargetFrameworks>
+  </PropertyGroup>
+  <ItemGroup>
+    <CompilerVisibleProperty Include="NetEvolveAnalyzerTargetFrameworks" />
+  </ItemGroup>
 </Project>

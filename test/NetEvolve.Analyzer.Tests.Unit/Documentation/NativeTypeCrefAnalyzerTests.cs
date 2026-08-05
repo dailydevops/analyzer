@@ -1,7 +1,11 @@
 namespace NetEvolve.Analyzer.Tests.Unit.Documentation;
 
 using System;
+using System.Threading;
 using System.Threading.Tasks;
+using Microsoft.CodeAnalysis.CSharp.Testing;
+using Microsoft.CodeAnalysis.Testing;
+using NetEvolve.Analyzer;
 using NetEvolve.Analyzer.Documentation;
 using NetEvolve.Analyzer.Tests.Unit.Verifiers;
 using TUnit.Assertions;
@@ -151,6 +155,95 @@ public sealed class NativeTypeCrefAnalyzerTests
             }
             """
         );
+
+    [Test]
+    public Task DateOnlyTypeName_Reports() =>
+        CSharpAnalyzerVerifier<NativeTypeCrefAnalyzer>.VerifyAnalyzerAsync(
+            """
+            using System;
+
+            public sealed class Sample
+            {
+                /// <summary>Gets the {|NE0008:<c>DateOnly</c>|} value.</summary>
+                public DateOnly Value => DateOnly.MinValue;
+            }
+            """
+        );
+
+    [Test]
+    public Task TimeOnlyTypeName_Reports() =>
+        CSharpAnalyzerVerifier<NativeTypeCrefAnalyzer>.VerifyAnalyzerAsync(
+            """
+            using System;
+
+            public sealed class Sample
+            {
+                /// <summary>Gets the {|NE0008:<c>TimeOnly</c>|} value.</summary>
+                public TimeOnly Value => TimeOnly.MinValue;
+            }
+            """
+        );
+
+    // ---- Negative: DateOnly/TimeOnly are only recognized when the compilation actually has the type ---------
+    // (they were introduced in .NET 6; a consumer targeting an older framework has no such type to cref).
+
+    [Test]
+    public async Task DateOnlyTypeName_TargetFrameworkWithoutDateOnly_NoDiagnostic()
+    {
+        var test = new CSharpAnalyzerTest<NativeTypeCrefAnalyzer, DefaultVerifier>
+        {
+            TestCode = """
+                public sealed class Sample
+                {
+                    /// <summary>Gets the <c>DateOnly</c> value.</summary>
+                    public string Value => "DateOnly";
+                }
+                """,
+            ReferenceAssemblies = ReferenceAssemblies.NetStandard.NetStandard20,
+        };
+
+        await test.RunAsync(CancellationToken.None).ConfigureAwait(false);
+    }
+
+    // ---- Multi-targeting: each TFM's compilation is analyzed independently, with no state bleeding between
+    // them — the recognized-type set is computed fresh per CompilationStartAction, not cached statically. A
+    // multi-targeted consumer project builds one Compilation per TargetFramework, so running the analyzer
+    // against each TFM's own reference assemblies (as done here) is exactly what happens in that build.
+
+    [Test]
+    public async Task MultiTargetedProject_EachTargetFrameworkAnalyzedOnItsOwnMerits()
+    {
+        const string source = """
+            public sealed class Sample
+            {
+                /// <summary>Gets the <c>DateOnly</c> value.</summary>
+                public string Value => "DateOnly";
+            }
+            """;
+
+        var net80Test = new CSharpAnalyzerTest<NativeTypeCrefAnalyzer, DefaultVerifier>
+        {
+            TestCode = source,
+            ReferenceAssemblies = ReferenceAssemblies.Net.Net80,
+        };
+        net80Test.ExpectedDiagnostics.Add(
+            CSharpAnalyzerVerifier<NativeTypeCrefAnalyzer>
+                .Diagnostic(DiagnosticIds.NE0008)
+                .WithSpan(3, 27, 3, 42)
+                .WithArguments("DateOnly", "c")
+        );
+
+        var netStandardTest = new CSharpAnalyzerTest<NativeTypeCrefAnalyzer, DefaultVerifier>
+        {
+            TestCode = source,
+            ReferenceAssemblies = ReferenceAssemblies.NetStandard.NetStandard20,
+        };
+
+        // Order matters here: the netstandard2.0 run executes first so a static/shared cache leaking the
+        // net8.0 result forward would surface as a false positive on the framework that has no DateOnly type.
+        await netStandardTest.RunAsync(CancellationToken.None).ConfigureAwait(false);
+        await net80Test.RunAsync(CancellationToken.None).ConfigureAwait(false);
+    }
 
     // ---- Negative: void is excluded, it's handled by NE0007 instead ----------------------------------------
 
