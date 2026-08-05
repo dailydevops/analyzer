@@ -17,9 +17,11 @@ using NetEvolve.Analyzer.Helpers;
 /// <c>CancellationToken cancellationToken = default</c> as the last parameter of the flagged method, adding
 /// a <c>using System.Threading;</c> directive when the file does not already have one in scope, and — on a
 /// best-effort basis — passes the new token through to call sites within the method's own body that either
-/// already have an unfilled trailing <c>CancellationToken</c> slot or have exactly one sibling overload adding
-/// one. Nested lambdas and local functions are left alone: their own cancellation handling is out of this
-/// fix's scope.
+/// already have an unfilled <c>CancellationToken</c> parameter or have exactly one sibling overload adding
+/// one. The token is always appended as a named argument (<c>cancellationToken: cancellationToken</c>) rather
+/// than positionally, so the target parameter can be reached even when other optional parameters follow it.
+/// Nested lambdas and local functions are left alone: their own cancellation handling is out of this fix's
+/// scope.
 /// </summary>
 [ExportCodeFixProvider(LanguageNames.CSharp, Name = nameof(RequireCancellationTokenParameterCodeFixProvider))]
 [Shared]
@@ -104,12 +106,18 @@ public sealed class RequireCancellationTokenParameterCodeFixProvider : CodeFixPr
             return method;
         }
 
+        var argumentByInvocation = candidates.ToDictionary(
+            candidate => candidate.Invocation,
+            candidate =>
+                SyntaxFactory
+                    .Argument(SyntaxFactory.IdentifierName(ParameterName))
+                    .WithNameColon(SyntaxFactory.NameColon(candidate.ParameterName))
+        );
+
         return method.ReplaceNodes(
-            candidates,
+            argumentByInvocation.Keys,
             (originalInvocation, _) =>
-                originalInvocation.AddArgumentListArguments(
-                    SyntaxFactory.Argument(SyntaxFactory.IdentifierName(ParameterName))
-                )
+                originalInvocation.AddArgumentListArguments(argumentByInvocation[originalInvocation])
         );
     }
 
