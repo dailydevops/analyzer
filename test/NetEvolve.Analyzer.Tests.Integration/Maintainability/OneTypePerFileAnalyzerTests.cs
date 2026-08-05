@@ -92,6 +92,24 @@ public sealed class OneTypePerFileAnalyzerTests
     }
 
     [Test]
+    public async Task FileScopedType_MismatchedName_IsIgnored()
+    {
+        const string source = """
+            namespace Geometry;
+
+            public sealed class Circle { }
+
+            file sealed class Helper { }
+            """;
+
+        var diagnostics = await AnalyzerCompiler
+            .GetAnalyzerDiagnosticsAsync(source, new OneTypePerFileAnalyzer(), path: "Circle.cs")
+            .ConfigureAwait(false);
+
+        await Assert.That(diagnostics.Any(IsNe0001)).IsFalse();
+    }
+
+    [Test]
     public async Task GroupGenericOverloads_Property_SuppressesArityViolation()
     {
         const string source = """
