@@ -163,4 +163,20 @@ internal static class CSharpKeywords
         "nint",
         "nuint"
     );
+
+    /// <summary>
+    /// Common BCL value types that, like <see cref="NativeTypeKeywords"/>, are frequently misdocumented as
+    /// <c>&lt;c&gt;type&lt;/c&gt;</c> instead of <c>&lt;see cref="type"/&gt;</c>. These are ordinary types, not
+    /// C# keywords — a bare reference resolves via <c>&lt;see cref="..."/&gt;</c> the same way any other type
+    /// name does, as long as it is in scope.
+    /// </summary>
+    public static readonly ImmutableHashSet<string> WellKnownBclTypeNames = ImmutableHashSet.Create(
+        StringComparer.Ordinal,
+        "Guid",
+        "DateTime",
+        "DateTimeOffset",
+        "DateOnly",
+        "TimeOnly",
+        "TimeSpan"
+    );
 }
