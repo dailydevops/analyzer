@@ -1,4 +1,4 @@
-namespace NetEvolve.Analyzer.Documentation;
+﻿namespace NetEvolve.Analyzer.Documentation;
 
 using System;
 using System.Collections.Immutable;
@@ -12,8 +12,8 @@ using NetEvolve.Analyzer.Helpers;
 /// <summary>
 /// NE0008 — reports a <c>&lt;c&gt;</c> or <c>&lt;code&gt;</c> element inside an XML doc comment whose entire
 /// content is a single recognized native/predefined C# type name (<see cref="CSharpKeywords.NativeTypeKeywords"/>)
-/// or common BCL value type name (<see cref="CSharpKeywords.WellKnownBclTypeNames"/> — <c>Guid</c>,
-/// <c>DateTime</c>, <c>DateTimeOffset</c>, <c>TimeSpan</c>), which should instead use
+/// or common BCL value type name (<see cref="CSharpKeywords.WellKnownBclTypeNames"/> — <see cref="Guid"/>,
+/// <see cref="DateTime"/>, <see cref="DateTimeOffset"/>, <see cref="TimeSpan"/>), which should instead use
 /// <c>&lt;see cref="..."/&gt;</c>. <c>DateOnly</c>/<c>TimeOnly</c> (<see cref="CSharpKeywords.ConditionalBclTypeMinimumVersions"/>)
 /// join the recognized set only when the compilation actually has the type in scope — a consumer targeting a
 /// framework older than .NET 6 has no such type to <c>cref</c>, so flagging it there would be wrong. The whole

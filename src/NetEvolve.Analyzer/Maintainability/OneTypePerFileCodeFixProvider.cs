@@ -113,6 +113,8 @@ public sealed class OneTypePerFileCodeFixProvider : CodeFixProvider
         CancellationToken cancellationToken
     )
     {
+        cancellationToken.ThrowIfCancellationRequested();
+
         var root = (CompilationUnitSyntax)(await document.GetSyntaxRootAsync(cancellationToken).ConfigureAwait(false))!;
 
         var groupGenericOverloads = ReadGroupGenericOverloads(document);

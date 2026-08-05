@@ -1,4 +1,4 @@
-namespace NetEvolve.Analyzer.Usage;
+﻿namespace NetEvolve.Analyzer.Usage;
 
 using System.Collections.Immutable;
 using System.Composition;
@@ -65,6 +65,8 @@ public sealed class UseIsNotNullCodeFixProvider : CodeFixProvider
         CancellationToken cancellationToken
     )
     {
+        cancellationToken.ThrowIfCancellationRequested();
+
         var root = (await document.GetSyntaxRootAsync(cancellationToken).ConfigureAwait(false))!;
 
         // Re-find the comparison in the freshly fetched root so the replaced node belongs to that same tree.

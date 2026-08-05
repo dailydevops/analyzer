@@ -1,4 +1,4 @@
-namespace NetEvolve.Analyzer.Documentation;
+﻿namespace NetEvolve.Analyzer.Documentation;
 
 using System.Collections.Immutable;
 using System.Linq;
@@ -33,6 +33,8 @@ internal sealed class UseLangwordSuppressor : NetEvolveSuppressorBase
     /// <inheritdoc />
     protected override bool ShouldSuppress(Diagnostic diagnostic, CancellationToken cancellationToken)
     {
+        cancellationToken.ThrowIfCancellationRequested();
+
         var tree = diagnostic.Location.SourceTree;
         if (tree is null)
         {

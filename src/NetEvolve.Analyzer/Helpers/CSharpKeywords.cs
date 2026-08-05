@@ -1,4 +1,4 @@
-namespace NetEvolve.Analyzer.Helpers;
+﻿namespace NetEvolve.Analyzer.Helpers;
 
 using System;
 using System.Collections.Immutable;
@@ -13,7 +13,7 @@ internal static class CSharpKeywords
 {
     /// <summary>
     /// Keywords that are reserved everywhere; an identifier with the same spelling requires the <c>@</c>
-    /// prefix (<c>@class</c>). Native type names (<c>bool</c>, <c>byte</c>, <c>char</c>, ...) are
+    /// prefix (<c>@class</c>). Native type names (<see cref="bool"/>, <see cref="byte"/>, <see cref="char"/>, ...) are
     /// intentionally excluded — referencing a type by its bare name in a doc comment is idiomatic and not
     /// the keyword-in-<c>&lt;c&gt;</c> mistake this list exists to catch. <see langword="void"/> is kept, since it
     /// denotes the absence of a return type rather than an actual type, and is commonly referenced the
@@ -88,7 +88,7 @@ internal static class CSharpKeywords
     /// <summary>
     /// Keywords that carry special meaning only in specific syntactic contexts (query clauses, patterns,
     /// declarations); the same spelling is a valid identifier everywhere else. Native type names
-    /// (<c>nint</c>, <c>nuint</c>) are intentionally excluded for the same reason as in
+    /// (<see cref="nint"/>, <see cref="nuint"/>) are intentionally excluded for the same reason as in
     /// <see cref="ReservedKeywords"/>.
     /// </summary>
     public static readonly ImmutableHashSet<string> ContextualKeywords = ImmutableHashSet.Create(

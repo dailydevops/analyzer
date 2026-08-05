@@ -92,6 +92,8 @@ internal sealed class SequentialFixAllProvider : FixAllProvider
     // registers no action (e.g. NE0001's collision case) is passed over without failing.
     private async Task<Solution> FixAllAsync(FixAllContext fixAllContext, CancellationToken cancellationToken)
     {
+        cancellationToken.ThrowIfCancellationRequested();
+
         var solution = fixAllContext.Solution;
         var scope = fixAllContext.Scope;
         var documentId = fixAllContext.Document?.Id;
@@ -121,6 +123,8 @@ internal sealed class SequentialFixAllProvider : FixAllProvider
         CancellationToken cancellationToken
     )
     {
+        cancellationToken.ThrowIfCancellationRequested();
+
         foreach (var id in TargetDocumentIds(solution, scope, documentId, projectId))
         {
             var changed = await TryFixDocumentAsync(fixAllContext, solution, id, cancellationToken)
@@ -143,6 +147,9 @@ internal sealed class SequentialFixAllProvider : FixAllProvider
         CancellationToken cancellationToken
     )
     {
+        // The id always comes from TargetDocumentIds enumerating the current solution, so the document exists.
+        cancellationToken.ThrowIfCancellationRequested();
+
         // The id always comes from TargetDocumentIds enumerating the current solution, so the document exists.
         var document = solution.GetDocument(id)!;
 
@@ -173,6 +180,8 @@ internal sealed class SequentialFixAllProvider : FixAllProvider
         CancellationToken cancellationToken
     )
     {
+        cancellationToken.ThrowIfCancellationRequested();
+
         var project = document.Project;
         var compilation = (await project.GetCompilationAsync(cancellationToken).ConfigureAwait(false))!;
 
@@ -206,6 +215,8 @@ internal sealed class SequentialFixAllProvider : FixAllProvider
         CancellationToken cancellationToken
     )
     {
+        cancellationToken.ThrowIfCancellationRequested();
+
         var actions = new List<CodeAction>();
         var context = new CodeFixContext(document, diagnostic, (action, _) => actions.Add(action), cancellationToken);
         await fixProvider.RegisterCodeFixesAsync(context).ConfigureAwait(false);
