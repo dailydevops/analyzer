@@ -112,15 +112,26 @@ public sealed class RequireCancellationCheckCodeFixProvider : CodeFixProvider
 
         // Normalize the gap between the inserted check and whatever statement follows it to exactly one blank
         // line: none was there before (the check would otherwise butt up directly against the next statement),
-        // and if the source already had extra blank lines there, this collapses them back down to one.
+        // and if the source already had extra blank lines there, this collapses them back down to one. Only do
+        // this when the following statement's leading trivia is purely blank-line filler (end-of-line and
+        // whitespace); if it also carries a comment (or anything else), replacing the whole trivia list would
+        // silently delete it, so leave it untouched and accept whatever gap was already there.
         if (guardCount < statements.Count)
         {
             var followingStatement = newStatements[guardCount + 1];
-            var normalizedFollowing = followingStatement.WithLeadingTrivia(
-                SyntaxFactory.EndOfLine("\n"),
-                SyntaxFactory.Whitespace(indentation)
-            );
-            newStatements = newStatements.Replace(followingStatement, normalizedFollowing);
+            var leadingTrivia = followingStatement.GetLeadingTrivia();
+            if (
+                leadingTrivia.All(trivia =>
+                    trivia.IsKind(SyntaxKind.EndOfLineTrivia) || trivia.IsKind(SyntaxKind.WhitespaceTrivia)
+                )
+            )
+            {
+                var normalizedFollowing = followingStatement.WithLeadingTrivia(
+                    SyntaxFactory.EndOfLine("\n"),
+                    SyntaxFactory.Whitespace(indentation)
+                );
+                newStatements = newStatements.Replace(followingStatement, normalizedFollowing);
+            }
         }
 
         var newBody = body.WithStatements(newStatements);
@@ -139,15 +150,35 @@ public sealed class RequireCancellationCheckCodeFixProvider : CodeFixProvider
     {
         if (insertionIndex < statements.Count)
         {
-            return statements[insertionIndex].GetLeadingTrivia().ToFullString();
+            return GetTrailingIndentation(statements[insertionIndex].GetLeadingTrivia());
         }
 
         if (statements.Count > 0)
         {
-            return statements[statements.Count - 1].GetLeadingTrivia().ToFullString();
+            return GetTrailingIndentation(statements[statements.Count - 1].GetLeadingTrivia());
         }
 
-        return method.GetLeadingTrivia().ToFullString() + "    ";
+        return GetTrailingIndentation(method.GetLeadingTrivia()) + "    ";
+    }
+
+    // A statement's (or the method's) leading trivia isn't just its indentation: it's everything back to the
+    // previous token, which can include blank lines, comments, or (for a doc comment) a trivia node whose own
+    // text ends with a newline that isn't itself a separate EndOfLineTrivia. Using the raw trivia text as
+    // "indentation" bakes those extra lines into every spot the caller inserts it (the check's own leading
+    // trivia, and each line of the generated if-block), turning a single blank line or comment before the
+    // insertion point into a duplicated line after every generated line. What's actually wanted is only the
+    // contiguous run of whitespace immediately preceding the token - i.e. trailing whitespace trivia, walking
+    // backwards from the end of the list until something else (end-of-line, comment, ...) is hit.
+    private static string GetTrailingIndentation(SyntaxTriviaList leadingTrivia)
+    {
+        var start = leadingTrivia.Count;
+
+        while (start > 0 && leadingTrivia[start - 1].IsKind(SyntaxKind.WhitespaceTrivia))
+        {
+            start--;
+        }
+
+        return string.Concat(leadingTrivia.Skip(start).Select(trivia => trivia.ToFullString()));
     }
 
     // Mirrors RequireCancellationCheckAnalyzer.IsGuardClause using only syntax (no semantic model needed here:
