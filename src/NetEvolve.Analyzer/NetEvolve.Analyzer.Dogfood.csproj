@@ -11,7 +11,6 @@
          does not build parameterized instances of the same project file the way `dotnet build`'s own
          reference-graph resolution does. A distinct project file avoids that entirely. -->
     <RoslynApiVersion>5.6.0</RoslynApiVersion>
-    <IsPackable>false</IsPackable>
   </PropertyGroup>
 
   <!-- BaseIntermediateOutputPath/BaseOutputPath must be set before Sdk.props is imported (MSB3539),
@@ -32,4 +31,12 @@
   </PropertyGroup>
 
   <Import Project="Sdk.targets" Sdk="Microsoft.NET.Sdk" />
+
+  <!-- NetEvolve.Defaults' SupportGeneral.targets (imported above, via Sdk.targets) unconditionally sets
+       IsPackable=true for every non-test, non-example project, so it must be overridden after that import
+       to win. Never packed/published on its own; referenced only as an Analyzer item by the other three
+       variants. -->
+  <PropertyGroup>
+    <IsPackable>false</IsPackable>
+  </PropertyGroup>
 </Project>
