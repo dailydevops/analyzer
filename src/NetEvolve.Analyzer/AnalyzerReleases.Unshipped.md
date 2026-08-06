@@ -5,3 +5,5 @@
 
 Rule ID | Category | Severity | Notes
 --------|----------|----------|-------
+NE0012 | Style | Info | RequireNumericLiteralSuffixAnalyzer, [Documentation](https://github.com/dailydevops/analyzer/blob/main/docs/rules/NE0012.md)
+NE0013 | Style | Info | UseNumericLiteralSuffixOverCastAnalyzer, [Documentation](https://github.com/dailydevops/analyzer/blob/main/docs/rules/NE0013.md)
