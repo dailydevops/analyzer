@@ -84,8 +84,11 @@ internal static class CancellationTokenCallSites
     // overload that adds one and every currently supplied argument would still line up positionally.
     // 'parameterName' comes out as the invoked method's own name for that parameter, since the argument is
     // appended by name specifically so it can target that slot even when other optional parameters follow it;
-    // a positional append could only ever reach a truly last parameter. Named, ref, and out arguments already
-    // present on the call are left alone entirely to keep this analysis simple.
+    // a positional append could only ever reach a truly last parameter. Existing named arguments are fine to
+    // append alongside — C# requires them to already come after all positional ones, so the new trailing
+    // named argument can only ever target a parameter nothing else has claimed. ref/out arguments are left
+    // alone, since neither can appear on the CancellationToken slot itself and reasoning about them adds
+    // nothing here.
     private static bool TryGetAppendableParameterName(
         SemanticModel semanticModel,
         InvocationExpressionSyntax invocation,
@@ -95,11 +98,7 @@ internal static class CancellationTokenCallSites
         parameterName = null;
 
         var arguments = invocation.ArgumentList.Arguments;
-        if (
-            arguments.Any(argument =>
-                argument.NameColon is not null || !argument.RefKindKeyword.IsKind(SyntaxKind.None)
-            )
-        )
+        if (arguments.Any(argument => !argument.RefKindKeyword.IsKind(SyntaxKind.None)))
         {
             return false;
         }
