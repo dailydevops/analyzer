@@ -1,0 +1,160 @@
+<?xml version="1.0" encoding="utf-8"?>
+<root>
+  <xsd:schema id="root" xmlns="" xmlns:xsd="http://www.w3.org/2001/XMLSchema" xmlns:msdata="urn:schemas-microsoft-com:xml-msdata">
+    <xsd:import namespace="http://www.w3.org/XML/1998/namespace" />
+    <xsd:element name="root" msdata:IsDataSet="true">
+      <xsd:complexType>
+        <xsd:choice maxOccurs="unbounded">
+          <xsd:element name="metadata">
+            <xsd:complexType>
+              <xsd:sequence>
+                <xsd:element name="value" type="xsd:string" minOccurs="0" />
+              </xsd:sequence>
+              <xsd:attribute name="name" use="required" type="xsd:string" />
+              <xsd:attribute name="type" type="xsd:string" />
+              <xsd:attribute name="mimetype" type="xsd:string" />
+              <xsd:attribute ref="xml:space" />
+            </xsd:complexType>
+          </xsd:element>
+          <xsd:element name="assembly">
+            <xsd:complexType>
+              <xsd:attribute name="alias" type="xsd:string" />
+              <xsd:attribute name="name" type="xsd:string" />
+            </xsd:complexType>
+          </xsd:element>
+          <xsd:element name="data">
+            <xsd:complexType>
+              <xsd:sequence>
+                <xsd:element name="value" type="xsd:string" minOccurs="0" msdata:Ordinal="1" />
+                <xsd:element name="comment" type="xsd:string" minOccurs="0" msdata:Ordinal="2" />
+              </xsd:sequence>
+              <xsd:attribute name="name" type="xsd:string" use="required" msdata:Ordinal="1" />
+              <xsd:attribute name="type" type="xsd:string" msdata:Ordinal="3" />
+              <xsd:attribute name="mimetype" type="xsd:string" msdata:Ordinal="4" />
+              <xsd:attribute ref="xml:space" />
+            </xsd:complexType>
+          </xsd:element>
+          <xsd:element name="resheader">
+            <xsd:complexType>
+              <xsd:sequence>
+                <xsd:element name="value" type="xsd:string" minOccurs="0" msdata:Ordinal="1" />
+              </xsd:sequence>
+              <xsd:attribute name="name" type="xsd:string" use="required" />
+            </xsd:complexType>
+          </xsd:element>
+        </xsd:choice>
+      </xsd:complexType>
+    </xsd:element>
+  </xsd:schema>
+  <resheader name="resmimetype">
+    <value>text/microsoft-resx</value>
+  </resheader>
+  <resheader name="version">
+    <value>2.0</value>
+  </resheader>
+  <resheader name="reader">
+    <value>System.Resources.ResXResourceReader, System.Windows.Forms, Version=4.0.0.0, Culture=neutral, PublicKeyToken=b77a5c561934e089</value>
+  </resheader>
+  <resheader name="writer">
+    <value>System.Resources.ResXResourceWriter, System.Windows.Forms, Version=4.0.0.0, Culture=neutral, PublicKeyToken=b77a5c561934e089</value>
+  </resheader>
+  <data name="NE0001_Title" xml:space="preserve">
+    <value>Declare one type per file with a matching file name</value>
+  </data>
+  <data name="NE0001_MessageFormat" xml:space="preserve">
+    <value>Type '{0}' should be declared in its own file named '{1}.cs'</value>
+  </data>
+  <data name="NE0001_Description" xml:space="preserve">
+    <value>Each top-level type should live in its own file whose name matches the type. Generic overloads are encoded by arity unless overload grouping is enabled.</value>
+  </data>
+  <data name="NE0002_Title" xml:space="preserve">
+    <value>Namespace should match the folder structure</value>
+  </data>
+  <data name="NE0002_MessageFormat" xml:space="preserve">
+    <value>Namespace '{0}' should be '{1}' to match the folder structure</value>
+  </data>
+  <data name="NE0002_Description" xml:space="preserve">
+    <value>Anchored at the RootNamespace MSBuild property, the declared namespace should equal RootNamespace joined with the file's folder path relative to the project directory, so the physical and logical layout stay aligned.</value>
+  </data>
+  <data name="NE0003_Title" xml:space="preserve">
+    <value>Declare a single namespace per file</value>
+  </data>
+  <data name="NE0003_MessageFormat" xml:space="preserve">
+    <value>Declare exactly one namespace per file</value>
+  </data>
+  <data name="NE0003_Description" xml:space="preserve">
+    <value>A file that declares more than one namespace (sibling or nested) hides types from the name-to-location mapping the other organization rules establish. Declare exactly one namespace per file.</value>
+  </data>
+  <data name="NE0004_Title" xml:space="preserve">
+    <value>Use the 'is null' pattern instead of '== null'</value>
+  </data>
+  <data name="NE0004_MessageFormat" xml:space="preserve">
+    <value>Use the 'is null' pattern instead of comparing with '== null'</value>
+  </data>
+  <data name="NE0004_Description" xml:space="preserve">
+    <value>A null comparison with the equality operator can be redefined by a user-defined 'operator =='; the 'is null' pattern always performs a null check and cannot be overridden, so it expresses the intent unambiguously.</value>
+  </data>
+  <data name="NE0005_Title" xml:space="preserve">
+    <value>Use the 'is not null' pattern instead of '!= null'</value>
+  </data>
+  <data name="NE0005_MessageFormat" xml:space="preserve">
+    <value>Use the 'is not null' pattern instead of comparing with '!= null'</value>
+  </data>
+  <data name="NE0005_Description" xml:space="preserve">
+    <value>A null comparison with the inequality operator can be redefined by a user-defined 'operator !='; the 'is not null' pattern always performs a null check and cannot be overridden, so it expresses the intent unambiguously.</value>
+  </data>
+  <data name="NE0006_Title" xml:space="preserve">
+    <value>Use the 'is not null' pattern instead of 'is object'</value>
+  </data>
+  <data name="NE0006_MessageFormat" xml:space="preserve">
+    <value>Use the 'is not null' pattern instead of 'is object' for a null check</value>
+  </data>
+  <data name="NE0006_Description" xml:space="preserve">
+    <value>Using 'is object' as a non-null check is easily misread as a type check; the 'is not null' pattern states the null check directly.</value>
+  </data>
+  <data name="NE0007_Title" xml:space="preserve">
+    <value>Use &lt;see langword="..."/&gt; instead of &lt;c&gt;...&lt;/c&gt; or &lt;code&gt;...&lt;/code&gt; for C# keywords</value>
+  </data>
+  <data name="NE0007_MessageFormat" xml:space="preserve">
+    <value>Use &lt;see langword="{0}"/&gt; instead of &lt;{1}&gt;{0}&lt;/{1}&gt;</value>
+  </data>
+  <data name="NE0007_Description" xml:space="preserve">
+    <value>A &lt;c&gt; or &lt;code&gt; element whose entire content is a single C# keyword (e.g. 'true', 'false', 'null') carries no semantic meaning; &lt;see langword="..."/&gt; is the dedicated construct for referencing a language keyword and is what IntelliSense and documentation generators recognize as such.</value>
+  </data>
+  <data name="NE0008_Title" xml:space="preserve">
+    <value>Use &lt;see cref="..."/&gt; instead of &lt;c&gt;...&lt;/c&gt; or &lt;code&gt;...&lt;/code&gt; for native type names</value>
+  </data>
+  <data name="NE0008_MessageFormat" xml:space="preserve">
+    <value>Use &lt;see cref="{0}"/&gt; instead of &lt;{1}&gt;{0}&lt;/{1}&gt;</value>
+  </data>
+  <data name="NE0008_Description" xml:space="preserve">
+    <value>A &lt;c&gt; or &lt;code&gt; element whose entire content is a single native type name (e.g. 'string', 'int') carries no semantic meaning; &lt;see cref="..."/&gt; is the dedicated construct for referencing a type and is what IntelliSense and documentation generators recognize as such.</value>
+  </data>
+  <data name="NE0009_Title" xml:space="preserve">
+    <value>Check for cancellation at the start of the method body</value>
+  </data>
+  <data name="NE0009_MessageFormat" xml:space="preserve">
+    <value>Method '{0}' has a CancellationToken parameter but does not check for cancellation at the start of its body</value>
+  </data>
+  <data name="NE0009_Description" xml:space="preserve">
+    <value>A method accepting a CancellationToken should honor it as early as possible. As the first statement after any leading argument-validation guard clauses, call 'token.ThrowIfCancellationRequested()' or check 'token.IsCancellationRequested' and return, so cancellation is observed before any other work runs.</value>
+  </data>
+  <data name="NE0010_Title" xml:space="preserve">
+    <value>Accept a CancellationToken parameter on an asynchronous method</value>
+  </data>
+  <data name="NE0010_MessageFormat" xml:space="preserve">
+    <value>Method '{0}' returns {1} and should accept a CancellationToken parameter</value>
+  </data>
+  <data name="NE0010_Description" xml:space="preserve">
+    <value>A method returning Task, Task&lt;T&gt;, ValueTask, ValueTask&lt;T&gt;, or IAsyncEnumerable&lt;T&gt; represents an operation a caller may want to cancel; accepting a CancellationToken parameter lets callers request cancellation and lets the method propagate it to the operations it awaits or yields from.</value>
+  </data>
+  <data name="NE0011_Title" xml:space="preserve">
+    <value>Avoid #region directives</value>
+  </data>
+  <data name="NE0011_MessageFormat" xml:space="preserve">
+    <value>Avoid using '#region' directives</value>
+  </data>
+  <data name="NE0011_Description" xml:space="preserve">
+    <value>#region directives encourage hiding code instead of decomposing it into smaller, well-named members or types. A #region nested inside a member body is reported as a warning; one wrapping type-, namespace-, or file-level content (whole classes, using directives, …) is reported as a suggestion.</value>
+  </data>
+</root>

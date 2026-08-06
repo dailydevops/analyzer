@@ -6,144 +6,66 @@ using Microsoft.CodeAnalysis;
 /// Central registry of every <see cref="DiagnosticDescriptor"/> shipped by this package, one field per rule.
 /// Descriptors reference their <see cref="DiagnosticIds">identifier</see> and
 /// <see cref="DiagnosticCategories">category</see>, so the identifier, category and folder stay in lockstep.
+/// Title, message format, and description are sourced from <c>Resources.resx</c>, keyed as
+/// <c>{id}_Title</c>, <c>{id}_MessageFormat</c>, and <c>{id}_Description</c>.
 /// </summary>
 internal static class DiagnosticDescriptors
 {
     /// <summary>NE0001 — declare one top-level type per file, with a matching file name.</summary>
-    public static readonly DiagnosticDescriptor OneTypePerFile = new(
-        id: DiagnosticIds.NE0001,
-        title: "Declare one type per file with a matching file name",
-        messageFormat: "Type '{0}' should be declared in its own file named '{1}.cs'",
-        category: DiagnosticCategories.Maintainability,
-        defaultSeverity: DiagnosticSeverity.Warning,
-        isEnabledByDefault: true,
-        description: "Each top-level type should live in its own file whose name matches the type. Generic "
-            + "overloads are encoded by arity unless overload grouping is enabled.",
-        helpLinkUri: DiagnosticIds.HelpLink(DiagnosticIds.NE0001)
+    public static readonly DiagnosticDescriptor OneTypePerFile = Create(
+        DiagnosticIds.NE0001,
+        DiagnosticCategories.Maintainability
     );
 
     /// <summary>NE0002 — the declared namespace should match the folder structure relative to <c>RootNamespace</c>.</summary>
-    public static readonly DiagnosticDescriptor NamespaceMatchesFolder = new(
-        id: DiagnosticIds.NE0002,
-        title: "Namespace should match the folder structure",
-        messageFormat: "Namespace '{0}' should be '{1}' to match the folder structure",
-        category: DiagnosticCategories.Maintainability,
-        defaultSeverity: DiagnosticSeverity.Warning,
-        isEnabledByDefault: true,
-        description: "Anchored at the RootNamespace MSBuild property, the declared namespace should equal "
-            + "RootNamespace joined with the file's folder path relative to the project directory, so the "
-            + "physical and logical layout stay aligned.",
-        helpLinkUri: DiagnosticIds.HelpLink(DiagnosticIds.NE0002)
+    public static readonly DiagnosticDescriptor NamespaceMatchesFolder = Create(
+        DiagnosticIds.NE0002,
+        DiagnosticCategories.Maintainability
     );
 
     /// <summary>NE0003 — a file should declare exactly one namespace.</summary>
-    public static readonly DiagnosticDescriptor SingleNamespacePerFile = new(
-        id: DiagnosticIds.NE0003,
-        title: "Declare a single namespace per file",
-        messageFormat: "Declare exactly one namespace per file",
-        category: DiagnosticCategories.Maintainability,
-        defaultSeverity: DiagnosticSeverity.Warning,
-        isEnabledByDefault: true,
-        description: "A file that declares more than one namespace (sibling or nested) hides types from the "
-            + "name-to-location mapping the other organization rules establish. Declare exactly one namespace "
-            + "per file.",
-        helpLinkUri: DiagnosticIds.HelpLink(DiagnosticIds.NE0003)
+    public static readonly DiagnosticDescriptor SingleNamespacePerFile = Create(
+        DiagnosticIds.NE0003,
+        DiagnosticCategories.Maintainability
     );
 
     /// <summary>NE0004 — prefer the <c>is null</c> pattern over <c>== null</c>.</summary>
-    public static readonly DiagnosticDescriptor UseIsNull = new(
-        id: DiagnosticIds.NE0004,
-        title: "Use the 'is null' pattern instead of '== null'",
-        messageFormat: "Use the 'is null' pattern instead of comparing with '== null'",
-        category: DiagnosticCategories.Usage,
-        defaultSeverity: DiagnosticSeverity.Warning,
-        isEnabledByDefault: true,
-        description: "A null comparison with the equality operator can be redefined by a user-defined "
-            + "'operator =='; the 'is null' pattern always performs a null check and cannot be overridden, so it "
-            + "expresses the intent unambiguously.",
-        helpLinkUri: DiagnosticIds.HelpLink(DiagnosticIds.NE0004)
-    );
+    public static readonly DiagnosticDescriptor UseIsNull = Create(DiagnosticIds.NE0004, DiagnosticCategories.Usage);
 
     /// <summary>NE0005 — prefer the <c>is not null</c> pattern over <c>!= null</c>.</summary>
-    public static readonly DiagnosticDescriptor UseIsNotNull = new(
-        id: DiagnosticIds.NE0005,
-        title: "Use the 'is not null' pattern instead of '!= null'",
-        messageFormat: "Use the 'is not null' pattern instead of comparing with '!= null'",
-        category: DiagnosticCategories.Usage,
-        defaultSeverity: DiagnosticSeverity.Warning,
-        isEnabledByDefault: true,
-        description: "A null comparison with the inequality operator can be redefined by a user-defined "
-            + "'operator !='; the 'is not null' pattern always performs a null check and cannot be overridden, so "
-            + "it expresses the intent unambiguously.",
-        helpLinkUri: DiagnosticIds.HelpLink(DiagnosticIds.NE0005)
-    );
+    public static readonly DiagnosticDescriptor UseIsNotNull = Create(DiagnosticIds.NE0005, DiagnosticCategories.Usage);
 
     /// <summary>NE0006 — prefer the <c>is not null</c> pattern over an <c>is object</c> null check.</summary>
-    public static readonly DiagnosticDescriptor UseIsNotNullOverIsObject = new(
-        id: DiagnosticIds.NE0006,
-        title: "Use the 'is not null' pattern instead of 'is object'",
-        messageFormat: "Use the 'is not null' pattern instead of 'is object' for a null check",
-        category: DiagnosticCategories.Usage,
-        defaultSeverity: DiagnosticSeverity.Warning,
-        isEnabledByDefault: true,
-        description: "Using 'is object' as a non-null check is easily misread as a type check; the 'is not null' "
-            + "pattern states the null check directly.",
-        helpLinkUri: DiagnosticIds.HelpLink(DiagnosticIds.NE0006)
+    public static readonly DiagnosticDescriptor UseIsNotNullOverIsObject = Create(
+        DiagnosticIds.NE0006,
+        DiagnosticCategories.Usage
     );
 
     /// <summary>
     /// NE0007 — prefer <c>&lt;see langword="..."/&gt;</c> over <c>&lt;c&gt;...&lt;/c&gt;</c> or
     /// <c>&lt;code&gt;...&lt;/code&gt;</c> for C# keywords.
     /// </summary>
-    public static readonly DiagnosticDescriptor UseLangword = new(
-        id: DiagnosticIds.NE0007,
-        title: "Use <see langword=\"...\"/> instead of <c>...</c> or <code>...</code> for C# keywords",
-        messageFormat: "Use <see langword=\"{0}\"/> instead of <{1}>{0}</{1}>",
-        category: DiagnosticCategories.Documentation,
-        defaultSeverity: DiagnosticSeverity.Warning,
-        isEnabledByDefault: true,
-        description: "A <c> or <code> element whose entire content is a single C# keyword (e.g. 'true', "
-            + "'false', 'null') carries no semantic meaning; <see langword=\"...\"/> is the dedicated construct "
-            + "for referencing a language keyword and is what IntelliSense and documentation generators "
-            + "recognize as such.",
-        helpLinkUri: DiagnosticIds.HelpLink(DiagnosticIds.NE0007)
+    public static readonly DiagnosticDescriptor UseLangword = Create(
+        DiagnosticIds.NE0007,
+        DiagnosticCategories.Documentation
     );
 
     /// <summary>
     /// NE0008 — prefer <c>&lt;see cref="..."/&gt;</c> over <c>&lt;c&gt;...&lt;/c&gt;</c> or
     /// <c>&lt;code&gt;...&lt;/code&gt;</c> for native type names.
     /// </summary>
-    public static readonly DiagnosticDescriptor NativeTypeCref = new(
-        id: DiagnosticIds.NE0008,
-        title: "Use <see cref=\"...\"/> instead of <c>...</c> or <code>...</code> for native type names",
-        messageFormat: "Use <see cref=\"{0}\"/> instead of <{1}>{0}</{1}>",
-        category: DiagnosticCategories.Documentation,
-        defaultSeverity: DiagnosticSeverity.Warning,
-        isEnabledByDefault: true,
-        description: "A <c> or <code> element whose entire content is a single native type name (e.g. "
-            + "'string', 'int') carries no semantic meaning; <see cref=\"...\"/> is the dedicated construct "
-            + "for referencing a type and is what IntelliSense and documentation generators recognize as "
-            + "such.",
-        helpLinkUri: DiagnosticIds.HelpLink(DiagnosticIds.NE0008)
+    public static readonly DiagnosticDescriptor NativeTypeCref = Create(
+        DiagnosticIds.NE0008,
+        DiagnosticCategories.Documentation
     );
 
     /// <summary>
     /// NE0009 — a method with a <see cref="System.Threading.CancellationToken"/> parameter should check for
     /// cancellation at the start of its body.
     /// </summary>
-    public static readonly DiagnosticDescriptor RequireCancellationCheck = new(
-        id: DiagnosticIds.NE0009,
-        title: "Check for cancellation at the start of the method body",
-        messageFormat: "Method '{0}' has a CancellationToken parameter but does not check for cancellation at "
-            + "the start of its body",
-        category: DiagnosticCategories.Usage,
-        defaultSeverity: DiagnosticSeverity.Warning,
-        isEnabledByDefault: true,
-        description: "A method accepting a CancellationToken should honor it as early as possible. As the "
-            + "first statement after any leading argument-validation guard clauses, call "
-            + "'token.ThrowIfCancellationRequested()' or check 'token.IsCancellationRequested' and return, so "
-            + "cancellation is observed before any other work runs.",
-        helpLinkUri: DiagnosticIds.HelpLink(DiagnosticIds.NE0009)
+    public static readonly DiagnosticDescriptor RequireCancellationCheck = Create(
+        DiagnosticIds.NE0009,
+        DiagnosticCategories.Usage
     );
 
     /// <summary>
@@ -151,35 +73,52 @@ internal static class DiagnosticDescriptors
     /// <c>ValueTask&lt;T&gt;</c>, or <c>IAsyncEnumerable&lt;T&gt;</c> should accept a
     /// <c>CancellationToken</c> parameter.
     /// </summary>
-    public static readonly DiagnosticDescriptor RequireCancellationTokenParameter = new(
-        id: DiagnosticIds.NE0010,
-        title: "Accept a CancellationToken parameter on an asynchronous method",
-        messageFormat: "Method '{0}' returns {1} and should accept a CancellationToken parameter",
-        category: DiagnosticCategories.Usage,
-        defaultSeverity: DiagnosticSeverity.Warning,
-        isEnabledByDefault: true,
-        description: "A method returning Task, Task<T>, ValueTask, ValueTask<T>, or IAsyncEnumerable<T> "
-            + "represents an operation a caller may want to cancel; accepting a CancellationToken parameter "
-            + "lets callers request cancellation and lets the method propagate it to the operations it awaits "
-            + "or yields from.",
-        helpLinkUri: DiagnosticIds.HelpLink(DiagnosticIds.NE0010)
+    public static readonly DiagnosticDescriptor RequireCancellationTokenParameter = Create(
+        DiagnosticIds.NE0010,
+        DiagnosticCategories.Usage
     );
 
     /// <summary>
     /// NE0011 — avoid <c>#region</c>/<c>#endregion</c> directives; reported as a warning when nested inside a
     /// member body, and as a suggestion everywhere else.
     /// </summary>
-    public static readonly DiagnosticDescriptor AvoidRegionDirectives = new(
-        id: DiagnosticIds.NE0011,
-        title: "Avoid #region directives",
-        messageFormat: "Avoid using '#region' directives",
-        category: DiagnosticCategories.Style,
-        defaultSeverity: DiagnosticSeverity.Warning,
-        isEnabledByDefault: true,
-        description: "#region directives encourage hiding code instead of decomposing it into smaller, "
-            + "well-named members or types. A #region nested inside a member body is reported as a warning; "
-            + "one wrapping type-, namespace-, or file-level content (whole classes, using directives, …) is "
-            + "reported as a suggestion.",
-        helpLinkUri: DiagnosticIds.HelpLink(DiagnosticIds.NE0011)
+    public static readonly DiagnosticDescriptor AvoidRegionDirectives = Create(
+        DiagnosticIds.NE0011,
+        DiagnosticCategories.Style
     );
+
+    /// <summary>
+    /// Builds a <see cref="DiagnosticDescriptor"/> for <paramref name="id"/>. Title, message format, and
+    /// description are sourced from <c>Resources.resx</c> (keys <c>{id}_Title</c>,
+    /// <c>{id}_MessageFormat</c>, <c>{id}_Description</c>), with its help link built via
+    /// <see cref="DiagnosticIds.HelpLink"/>.
+    /// </summary>
+    /// <param name="id">The diagnostic identifier, e.g. <c>NE0001</c>.</param>
+    /// <param name="category">The owning <see cref="DiagnosticCategories">category</see>.</param>
+    /// <param name="defaultSeverity">The default severity; defaults to <see cref="DiagnosticSeverity.Warning"/>.</param>
+    /// <param name="isEnabledByDefault">Whether the rule is enabled by default; defaults to <see langword="true"/>.</param>
+    private static DiagnosticDescriptor Create(
+        string id,
+        DiagnosticCategories category,
+        DiagnosticSeverity defaultSeverity = DiagnosticSeverity.Warning,
+        bool isEnabledByDefault = true
+    ) =>
+        new(
+            id: id,
+            title: new LocalizableResourceString($"{id}_Title", Resources.ResourceManager, typeof(Resources)),
+            messageFormat: new LocalizableResourceString(
+                $"{id}_MessageFormat",
+                Resources.ResourceManager,
+                typeof(Resources)
+            ),
+            category: category.ToString(),
+            defaultSeverity: defaultSeverity,
+            isEnabledByDefault: isEnabledByDefault,
+            description: new LocalizableResourceString(
+                $"{id}_Description",
+                Resources.ResourceManager,
+                typeof(Resources)
+            ),
+            helpLinkUri: DiagnosticIds.HelpLink(id, category)
+        );
 }
