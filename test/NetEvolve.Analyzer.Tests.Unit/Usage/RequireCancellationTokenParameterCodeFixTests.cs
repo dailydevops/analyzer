@@ -582,7 +582,7 @@ public sealed class RequireCancellationTokenParameterCodeFixTests
         );
 
     [Test]
-    public Task CallWithExistingNamedArgument_IsLeftUnchanged() =>
+    public Task CallWithExistingNamedArgument_GetsTokenAppended() =>
         CSharpCodeFixVerifier<
             RequireCancellationTokenParameterAnalyzer,
             RequireCancellationTokenParameterCodeFixProvider
@@ -612,11 +612,101 @@ public sealed class RequireCancellationTokenParameterCodeFixTests
             {
                 public Task Run(int value, CancellationToken cancellationToken = default)
                 {
-                    HelperAsync(value: value);
+                    HelperAsync(value: value, token: cancellationToken);
                     return OtherAsync(token: cancellationToken);
                 }
 
                 private static Task HelperAsync(int value, CancellationToken token = default) => Task.CompletedTask;
+
+                private static Task OtherAsync(CancellationToken token = default) => Task.CompletedTask;
+            }
+            """
+        );
+
+    [Test]
+    public Task CallWithPositionalArgumentFollowedByUnrelatedNamedArgument_GetsTokenAppended() =>
+        CSharpCodeFixVerifier<
+            RequireCancellationTokenParameterAnalyzer,
+            RequireCancellationTokenParameterCodeFixProvider
+        >.VerifyCodeFixAsync(
+            """
+            using System.Threading;
+            using System.Threading.Tasks;
+
+            public sealed class Sample
+            {
+                public Task {|NE0010:Run|}(string text)
+                {
+                    return HelperAsync(text, path: "Sample.cs");
+                }
+
+                private static Task HelperAsync(
+                    string text,
+                    string? options = null,
+                    string path = "",
+                    CancellationToken token = default
+                ) => Task.CompletedTask;
+            }
+            """,
+            """
+            using System.Threading;
+            using System.Threading.Tasks;
+
+            public sealed class Sample
+            {
+                public Task Run(string text, CancellationToken cancellationToken = default)
+                {
+                    return HelperAsync(text, path: "Sample.cs", token: cancellationToken);
+                }
+
+                private static Task HelperAsync(
+                    string text,
+                    string? options = null,
+                    string path = "",
+                    CancellationToken token = default
+                ) => Task.CompletedTask;
+            }
+            """
+        );
+
+    [Test]
+    public Task CallWithRefArgument_IsLeftUnchanged() =>
+        CSharpCodeFixVerifier<
+            RequireCancellationTokenParameterAnalyzer,
+            RequireCancellationTokenParameterCodeFixProvider
+        >.VerifyCodeFixAsync(
+            """
+            using System.Threading;
+            using System.Threading.Tasks;
+
+            public sealed class Sample
+            {
+                public Task {|NE0010:Run|}(int value)
+                {
+                    HelperAsync(ref value);
+                    return OtherAsync();
+                }
+
+                private static Task HelperAsync(ref int value, CancellationToken token = default) =>
+                    Task.CompletedTask;
+
+                private static Task OtherAsync(CancellationToken token = default) => Task.CompletedTask;
+            }
+            """,
+            """
+            using System.Threading;
+            using System.Threading.Tasks;
+
+            public sealed class Sample
+            {
+                public Task Run(int value, CancellationToken cancellationToken = default)
+                {
+                    HelperAsync(ref value);
+                    return OtherAsync(token: cancellationToken);
+                }
+
+                private static Task HelperAsync(ref int value, CancellationToken token = default) =>
+                    Task.CompletedTask;
 
                 private static Task OtherAsync(CancellationToken token = default) => Task.CompletedTask;
             }
