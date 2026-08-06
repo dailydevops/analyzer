@@ -82,6 +82,7 @@ public sealed class RequireCancellationCheckCodeFixTests
                 {
                     if (value is null)
                         throw new ArgumentNullException(nameof(value));
+
                     cancellationToken.ThrowIfCancellationRequested();
 
                     DoWork(value);
@@ -552,6 +553,7 @@ public sealed class RequireCancellationCheckCodeFixTests
                     {
                         throw new ArgumentNullException(nameof(value));
                     }
+
                     cancellationToken.ThrowIfCancellationRequested();
 
                     DoWork(value);
@@ -640,6 +642,7 @@ public sealed class RequireCancellationCheckCodeFixTests
                 public void Run(object value, CancellationToken cancellationToken)
                 {
                     ArgumentNullException.ThrowIfNull(value);
+
                     cancellationToken.ThrowIfCancellationRequested();
 
                     DoWork(value);
@@ -715,6 +718,7 @@ public sealed class RequireCancellationCheckCodeFixTests
                 {
                     if (value is null)
                         throw new ArgumentNullException(nameof(value));
+
                     cancellationToken.ThrowIfCancellationRequested();
                 }
             }
@@ -743,6 +747,256 @@ public sealed class RequireCancellationCheckCodeFixTests
 
             public sealed class Sample
             {
+                public void Run(CancellationToken cancellationToken)
+                {
+                    cancellationToken.ThrowIfCancellationRequested();
+                }
+            }
+            """,
+            ThrowIfCancellationRequestedKey
+        );
+
+    // ---- Regression: leading trivia preceding the insertion point is not indentation ----------------------
+    //
+    // A statement's leading trivia is everything back to the previous token, not just its indentation. If a
+    // blank line (or a comment) precedes the insertion point, that trivia must not leak into what the fix
+    // treats as "indentation" - otherwise it gets baked into every line the fix generates.
+
+    [Test]
+    public Task BlankLineBeforeInsertionPoint_AddsThrowIfCancellationRequestedWithoutExtraBlankLines() =>
+        RequireCancellationCheckCodeFixVerifier<
+            RequireCancellationCheckAnalyzer,
+            RequireCancellationCheckCodeFixProvider
+        >.VerifyCodeFixAsync(
+            """
+            using System;
+            using System.Threading;
+
+            public sealed class Sample
+            {
+                public void {|NE0009:Run|}(object value, CancellationToken cancellationToken)
+                {
+                    if (value is null)
+                        throw new ArgumentNullException(nameof(value));
+
+                    DoWork(value);
+                }
+
+                private static void DoWork(object value) { }
+            }
+            """,
+            """
+            using System;
+            using System.Threading;
+
+            public sealed class Sample
+            {
+                public void Run(object value, CancellationToken cancellationToken)
+                {
+                    if (value is null)
+                        throw new ArgumentNullException(nameof(value));
+
+                    cancellationToken.ThrowIfCancellationRequested();
+
+                    DoWork(value);
+                }
+
+                private static void DoWork(object value) { }
+            }
+            """,
+            ThrowIfCancellationRequestedKey
+        );
+
+    [Test]
+    public Task BlankLineBeforeInsertionPoint_AddsIsCancellationRequestedWithoutExtraBlankLines() =>
+        RequireCancellationCheckCodeFixVerifier<
+            RequireCancellationCheckAnalyzer,
+            RequireCancellationCheckCodeFixProvider
+        >.VerifyCodeFixAsync(
+            """
+            using System.Threading;
+
+            public sealed class Sample
+            {
+                public int {|NE0009:Compute|}(CancellationToken cancellationToken)
+                {
+
+                    return 42;
+                }
+            }
+            """,
+            """
+            using System.Threading;
+
+            public sealed class Sample
+            {
+                public int Compute(CancellationToken cancellationToken)
+                {
+                    if (cancellationToken.IsCancellationRequested)
+                    {
+                        return default;
+                    }
+
+                    return 42;
+                }
+            }
+            """,
+            IsCancellationRequestedKey
+        );
+
+    [Test]
+    public Task CommentBeforeInsertionPoint_AddsIsCancellationRequestedWithoutDuplicatingComment() =>
+        RequireCancellationCheckCodeFixVerifier<
+            RequireCancellationCheckAnalyzer,
+            RequireCancellationCheckCodeFixProvider
+        >.VerifyCodeFixAsync(
+            """
+            using System.Threading;
+
+            public sealed class Sample
+            {
+                public int {|NE0009:Compute|}(CancellationToken cancellationToken)
+                {
+                    // do the work
+                    return 42;
+                }
+            }
+            """,
+            """
+            using System.Threading;
+
+            public sealed class Sample
+            {
+                public int Compute(CancellationToken cancellationToken)
+                {
+                    if (cancellationToken.IsCancellationRequested)
+                    {
+                        return default;
+                    }
+                    // do the work
+                    return 42;
+                }
+            }
+            """,
+            IsCancellationRequestedKey
+        );
+
+    [Test]
+    public Task MultipleBlankLinesBeforeInsertionPoint_CollapsesToOneBlankLine() =>
+        RequireCancellationCheckCodeFixVerifier<
+            RequireCancellationCheckAnalyzer,
+            RequireCancellationCheckCodeFixProvider
+        >.VerifyCodeFixAsync(
+            """
+            using System;
+            using System.Threading;
+
+            public sealed class Sample
+            {
+                public void {|NE0009:Run|}(object value, CancellationToken cancellationToken)
+                {
+                    if (value is null)
+                        throw new ArgumentNullException(nameof(value));
+
+
+
+                    DoWork(value);
+                }
+
+                private static void DoWork(object value) { }
+            }
+            """,
+            """
+            using System;
+            using System.Threading;
+
+            public sealed class Sample
+            {
+                public void Run(object value, CancellationToken cancellationToken)
+                {
+                    if (value is null)
+                        throw new ArgumentNullException(nameof(value));
+
+                    cancellationToken.ThrowIfCancellationRequested();
+
+                    DoWork(value);
+                }
+
+                private static void DoWork(object value) { }
+            }
+            """,
+            ThrowIfCancellationRequestedKey
+        );
+
+    // Both guard clauses are "guard-clause-like", so the insertion point is at the very end of the statement
+    // list, and the indentation is read from the last statement (the second guard clause) rather than from
+    // whatever follows it. That last statement's own leading trivia carries the comment above it.
+    [Test]
+    public Task CommentBeforeLastGuardClause_AppendsThrowIfCancellationRequestedWithoutDuplicatingComment() =>
+        RequireCancellationCheckCodeFixVerifier<
+            RequireCancellationCheckAnalyzer,
+            RequireCancellationCheckCodeFixProvider
+        >.VerifyCodeFixAsync(
+            """
+            using System;
+            using System.Threading;
+
+            public sealed class Sample
+            {
+                public void {|NE0009:Run|}(object value, int count, CancellationToken cancellationToken)
+                {
+                    if (value is null)
+                        throw new ArgumentNullException(nameof(value));
+                    // second check
+                    if (count < 0)
+                        throw new ArgumentOutOfRangeException(nameof(count));
+                }
+            }
+            """,
+            """
+            using System;
+            using System.Threading;
+
+            public sealed class Sample
+            {
+                public void Run(object value, int count, CancellationToken cancellationToken)
+                {
+                    if (value is null)
+                        throw new ArgumentNullException(nameof(value));
+                    // second check
+                    if (count < 0)
+                        throw new ArgumentOutOfRangeException(nameof(count));
+
+                    cancellationToken.ThrowIfCancellationRequested();
+                }
+            }
+            """,
+            ThrowIfCancellationRequestedKey
+        );
+
+    [Test]
+    public Task XmlDocCommentAboveMethod_EmptyBody_InsertsCheckIndentedOneLevelDeeper() =>
+        RequireCancellationCheckCodeFixVerifier<
+            RequireCancellationCheckAnalyzer,
+            RequireCancellationCheckCodeFixProvider
+        >.VerifyCodeFixAsync(
+            """
+            using System.Threading;
+
+            public sealed class Sample
+            {
+                /// <summary>Does nothing, yet.</summary>
+                public void {|NE0009:Run|}(CancellationToken cancellationToken)
+                {
+                }
+            }
+            """,
+            """
+            using System.Threading;
+
+            public sealed class Sample
+            {
+                /// <summary>Does nothing, yet.</summary>
                 public void Run(CancellationToken cancellationToken)
                 {
                     cancellationToken.ThrowIfCancellationRequested();
