@@ -54,6 +54,7 @@ public sealed class RequireCancellationCheckAnalyzerTests
                 public void Run(CancellationToken cancellationToken)
                 {
                     cancellationToken.ThrowIfCancellationRequested();
+
                     DoWork();
                 }
 

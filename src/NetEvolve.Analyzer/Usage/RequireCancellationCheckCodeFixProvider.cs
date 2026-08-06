@@ -104,9 +104,15 @@ public sealed class RequireCancellationCheckCodeFixProvider : CodeFixProvider
 
         var statementText = await buildStatementText(document, current, tokenName, indentation, cancellationToken)
             .ConfigureAwait(false);
-        var checkStatement = SyntaxFactory
-            .ParseStatement(statementText)
-            .WithLeadingTrivia(SyntaxFactory.Whitespace(indentation));
+
+        // Separate the inserted check from the guard clauses above it with exactly one blank line, matching the
+        // blank line normalized below between the check and whatever follows it. Only applies when there's a
+        // preceding guard clause; the check being the method's first statement needs no leading gap.
+        var checkLeadingTrivia =
+            guardCount > 0
+                ? SyntaxFactory.TriviaList(SyntaxFactory.EndOfLine("\n"), SyntaxFactory.Whitespace(indentation))
+                : SyntaxFactory.TriviaList(SyntaxFactory.Whitespace(indentation));
+        var checkStatement = SyntaxFactory.ParseStatement(statementText).WithLeadingTrivia(checkLeadingTrivia);
 
         var newStatements = statements.Insert(guardCount, checkStatement);
 

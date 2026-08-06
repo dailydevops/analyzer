@@ -82,6 +82,7 @@ public sealed class RequireCancellationCheckCodeFixTests
                 {
                     if (value is null)
                         throw new ArgumentNullException(nameof(value));
+
                     cancellationToken.ThrowIfCancellationRequested();
 
                     DoWork(value);
@@ -552,6 +553,7 @@ public sealed class RequireCancellationCheckCodeFixTests
                     {
                         throw new ArgumentNullException(nameof(value));
                     }
+
                     cancellationToken.ThrowIfCancellationRequested();
 
                     DoWork(value);
@@ -640,6 +642,7 @@ public sealed class RequireCancellationCheckCodeFixTests
                 public void Run(object value, CancellationToken cancellationToken)
                 {
                     ArgumentNullException.ThrowIfNull(value);
+
                     cancellationToken.ThrowIfCancellationRequested();
 
                     DoWork(value);
@@ -715,6 +718,7 @@ public sealed class RequireCancellationCheckCodeFixTests
                 {
                     if (value is null)
                         throw new ArgumentNullException(nameof(value));
+
                     cancellationToken.ThrowIfCancellationRequested();
                 }
             }
@@ -791,6 +795,7 @@ public sealed class RequireCancellationCheckCodeFixTests
                 {
                     if (value is null)
                         throw new ArgumentNullException(nameof(value));
+
                     cancellationToken.ThrowIfCancellationRequested();
 
                     DoWork(value);
@@ -911,6 +916,7 @@ public sealed class RequireCancellationCheckCodeFixTests
                 {
                     if (value is null)
                         throw new ArgumentNullException(nameof(value));
+
                     cancellationToken.ThrowIfCancellationRequested();
 
                     DoWork(value);
@@ -960,6 +966,7 @@ public sealed class RequireCancellationCheckCodeFixTests
                     // second check
                     if (count < 0)
                         throw new ArgumentOutOfRangeException(nameof(count));
+
                     cancellationToken.ThrowIfCancellationRequested();
                 }
             }
