@@ -105,6 +105,6 @@ internal static class DiagnosticIds
         "CA1308:Normalize strings to uppercase",
         Justification = "The documentation folder structure under docs/rules/ is intentionally lowercase; this is not a security-sensitive normalization."
     )]
-    public static string HelpLink(string diagnosticId, DiagnosticCategories category) =>
-        $"{HelpLinkBase}{category.ToString().ToLowerInvariant()}/{diagnosticId.ToLowerInvariant()}.md";
+    public static string HelpLink(string diagnosticId, string category) =>
+        $"{HelpLinkBase}{category.ToLowerInvariant()}/{diagnosticId.ToLowerInvariant()}.md";
 }

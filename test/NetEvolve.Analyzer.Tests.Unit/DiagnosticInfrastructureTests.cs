@@ -23,4 +23,20 @@ public sealed class DiagnosticInfrastructureTests
             .That(link)
             .IsEqualTo("https://github.com/dailydevops/analyzer/blob/main/docs/rules/maintainability/ne0001.md");
     }
+
+    [Test]
+    public async Task Categories_UseTheStandardMicrosoftNames()
+    {
+        await Assert.That(DiagnosticCategories.Design).IsEqualTo("Design");
+        await Assert.That(DiagnosticCategories.Documentation).IsEqualTo("Documentation");
+        await Assert.That(DiagnosticCategories.Globalization).IsEqualTo("Globalization");
+        await Assert.That(DiagnosticCategories.Interoperability).IsEqualTo("Interoperability");
+        await Assert.That(DiagnosticCategories.Maintainability).IsEqualTo("Maintainability");
+        await Assert.That(DiagnosticCategories.Naming).IsEqualTo("Naming");
+        await Assert.That(DiagnosticCategories.Performance).IsEqualTo("Performance");
+        await Assert.That(DiagnosticCategories.Reliability).IsEqualTo("Reliability");
+        await Assert.That(DiagnosticCategories.Security).IsEqualTo("Security");
+        await Assert.That(DiagnosticCategories.Style).IsEqualTo("Style");
+        await Assert.That(DiagnosticCategories.Usage).IsEqualTo("Usage");
+    }
 }

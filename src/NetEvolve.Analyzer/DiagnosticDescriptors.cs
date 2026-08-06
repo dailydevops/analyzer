@@ -99,7 +99,7 @@ internal static class DiagnosticDescriptors
     /// <param name="isEnabledByDefault">Whether the rule is enabled by default; defaults to <see langword="true"/>.</param>
     private static DiagnosticDescriptor Create(
         string id,
-        DiagnosticCategories category,
+        string category,
         DiagnosticSeverity defaultSeverity = DiagnosticSeverity.Warning,
         bool isEnabledByDefault = true
     ) =>
@@ -111,7 +111,7 @@ internal static class DiagnosticDescriptors
                 Resources.ResourceManager,
                 typeof(Resources)
             ),
-            category: category.ToString(),
+            category: category,
             defaultSeverity: defaultSeverity,
             isEnabledByDefault: isEnabledByDefault,
             description: new LocalizableResourceString(
