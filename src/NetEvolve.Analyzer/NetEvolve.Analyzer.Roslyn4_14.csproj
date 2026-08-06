@@ -17,4 +17,12 @@
   <Import Project="NetEvolve.Analyzer.Build.props" />
 
   <Import Project="Sdk.targets" Sdk="Microsoft.NET.Sdk" />
+
+  <!-- NetEvolve.Defaults' SupportGeneral.targets (imported above, via Sdk.targets) unconditionally sets
+       IsPackable=true for every non-test, non-example project, so it must be overridden after that import
+       to win. Never packed/published on its own; only NetEvolve.Analyzer.csproj produces a nupkg,
+       referencing this project's build output by path (see _PackAnalyzer). -->
+  <PropertyGroup>
+    <IsPackable>false</IsPackable>
+  </PropertyGroup>
 </Project>
