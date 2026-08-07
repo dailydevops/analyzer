@@ -90,7 +90,7 @@ public sealed class OneTypePerFileCodeFixProvider : CodeFixProvider
         }
     }
 
-    private static Task<Solution> RenameFileAsync(
+    private static async Task<Solution> RenameFileAsync(
         Document document,
         string expectedName,
         CancellationToken cancellationToken
@@ -98,12 +98,16 @@ public sealed class OneTypePerFileCodeFixProvider : CodeFixProvider
     {
         cancellationToken.ThrowIfCancellationRequested();
 
+        // Changing an existing document's FilePath/Name is rejected by some workspace hosts (e.g. Visual
+        // Studio's VisualStudioWorkspaceImpl throws InvalidOperationException). Adding a new document and
+        // removing the old one is supported everywhere, so use the same approach as MoveTypeAsync.
+        var text = await document.GetTextAsync(cancellationToken).ConfigureAwait(false);
         var newName = expectedName + ".cs";
-        var solution = document
-            .Project.Solution.WithDocumentName(document.Id, newName)
-            .WithDocumentFilePath(document.Id, SiblingPath(document.FilePath!, newName));
+        var newDocumentId = DocumentId.CreateNewId(document.Project.Id);
 
-        return Task.FromResult(solution);
+        return document
+            .Project.Solution.RemoveDocument(document.Id)
+            .AddDocument(newDocumentId, newName, text, document.Folders, SiblingPath(document.FilePath!, newName));
     }
 
     private static async Task<Solution> MoveTypeAsync(
