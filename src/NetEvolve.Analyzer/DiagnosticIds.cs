@@ -87,6 +87,18 @@ internal static class DiagnosticIds
     /// </summary>
     public const string NE0011 = DiagnosticPrefix + "0011";
 
+    /// <summary>
+    /// NE0012 — a numeric literal should carry the canonical, upper-case suffix matching the type it's
+    /// converted to (<c>L</c>, <c>UL</c>, <c>U</c>, <c>F</c>, <c>D</c>, <c>M</c>).
+    /// </summary>
+    public const string NE0012 = DiagnosticPrefix + "0012";
+
+    /// <summary>
+    /// NE0013 — a numeric literal immediately cast to a suffixable numeric type (e.g. <c>(long)0</c>) should
+    /// use the literal suffix instead (<c>0L</c>).
+    /// </summary>
+    public const string NE0013 = DiagnosticPrefix + "0013";
+
     // Suppressors
 
     /// <summary>
@@ -95,6 +107,13 @@ internal static class DiagnosticIds
     /// against the same compilation.
     /// </summary>
     public const string NES0001 = SuppressionPrefix + "0001";
+
+    /// <summary>
+    /// NES0002 — suppresses SonarAnalyzer's <c>S818</c> ("Literal suffixes should be upper case") wherever
+    /// NE0012 already reports the same numeric literal, avoiding a duplicate, conflicting diagnostic when
+    /// both analyzers run against the same compilation.
+    /// </summary>
+    public const string NES0002 = SuppressionPrefix + "0002";
 
     /// <summary>Builds the documentation help link for a diagnostic identifier.</summary>
     /// <param name="diagnosticId">The diagnostic identifier, e.g. <c>NE0001</c>.</param>

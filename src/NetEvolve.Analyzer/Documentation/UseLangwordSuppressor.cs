@@ -31,7 +31,11 @@ internal sealed class UseLangwordSuppressor : NetEvolveSuppressorBase
         ImmutableArray.Create(Suppression);
 
     /// <inheritdoc />
-    protected override bool ShouldSuppress(Diagnostic diagnostic, CancellationToken cancellationToken)
+    protected override bool ShouldSuppress(
+        Diagnostic diagnostic,
+        Compilation compilation,
+        CancellationToken cancellationToken
+    )
     {
         cancellationToken.ThrowIfCancellationRequested();
 

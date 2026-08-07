@@ -157,4 +157,22 @@
   <data name="NE0011_Description" xml:space="preserve">
     <value>#region directives encourage hiding code instead of decomposing it into smaller, well-named members or types. A #region nested inside a member body is reported as a warning; one wrapping type-, namespace-, or file-level content (whole classes, using directives, …) is reported as a suggestion.</value>
   </data>
+  <data name="NE0012_Title" xml:space="preserve">
+    <value>Use an explicit numeric literal suffix</value>
+  </data>
+  <data name="NE0012_MessageFormat" xml:space="preserve">
+    <value>Numeric literal '{0}' should be '{1}'</value>
+  </data>
+  <data name="NE0012_Description" xml:space="preserve">
+    <value>A numeric literal converted to long, ulong, uint, float, double, or decimal should carry that type's canonical, upper-case suffix (L, UL, U, F, D, M) instead of relying on an implicit conversion, so the type is explicit at the literal itself. A hexadecimal or binary integer literal converted to float, double, or decimal is left alone, since that format has no such suffix to add.</value>
+  </data>
+  <data name="NE0013_Title" xml:space="preserve">
+    <value>Use a numeric literal suffix instead of casting the literal</value>
+  </data>
+  <data name="NE0013_MessageFormat" xml:space="preserve">
+    <value>Cast '{0}' should be the literal '{1}'</value>
+  </data>
+  <data name="NE0013_Description" xml:space="preserve">
+    <value>An integer literal immediately cast to long, ulong, uint, float, double, or decimal (e.g. '(long)0') should use that type's literal suffix instead ('0L'), which says the same thing without the cast. Only a plain integer literal (no existing suffix, no decimal point or exponent) is rewritten, since rewriting a literal that already has a fractional part could change its value.</value>
+  </data>
 </root>

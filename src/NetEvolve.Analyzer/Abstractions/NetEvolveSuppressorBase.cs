@@ -15,7 +15,7 @@ internal abstract class NetEvolveSuppressorBase : DiagnosticSuppressor
             .Select(s => s.SuppressedDiagnosticId)
             .ToImmutableHashSet(StringComparer.Ordinal);
         var diagnosticsToSuppress = context.ReportedDiagnostics.Where(d =>
-            diagnosticsIds.Contains(d.Id) && ShouldSuppress(d, context.CancellationToken)
+            diagnosticsIds.Contains(d.Id) && ShouldSuppress(d, context.Compilation, context.CancellationToken)
         );
 
         foreach (var diagnostic in diagnosticsToSuppress)
@@ -27,5 +27,9 @@ internal abstract class NetEvolveSuppressorBase : DiagnosticSuppressor
         }
     }
 
-    protected virtual bool ShouldSuppress(Diagnostic diagnostic, CancellationToken cancellationToken) => false;
+    protected virtual bool ShouldSuppress(
+        Diagnostic diagnostic,
+        Compilation compilation,
+        CancellationToken cancellationToken
+    ) => false;
 }

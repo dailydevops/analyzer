@@ -1,4 +1,4 @@
-namespace NetEvolve.Analyzer;
+﻿namespace NetEvolve.Analyzer;
 
 using Microsoft.CodeAnalysis;
 
@@ -85,6 +85,24 @@ internal static class DiagnosticDescriptors
     public static readonly DiagnosticDescriptor AvoidRegionDirectives = Create(
         DiagnosticIds.NE0011,
         DiagnosticCategories.Style
+    );
+
+    /// <summary>NE0012 — a numeric literal should carry the canonical, upper-case suffix matching the type it's
+    /// converted to.</summary>
+    public static readonly DiagnosticDescriptor RequireNumericLiteralSuffix = Create(
+        DiagnosticIds.NE0012,
+        DiagnosticCategories.Style,
+        DiagnosticSeverity.Info
+    );
+
+    /// <summary>
+    /// NE0013 — a numeric literal immediately cast to a suffixable numeric type should use the literal
+    /// suffix instead of the cast.
+    /// </summary>
+    public static readonly DiagnosticDescriptor UseNumericLiteralSuffixOverCast = Create(
+        DiagnosticIds.NE0013,
+        DiagnosticCategories.Style,
+        DiagnosticSeverity.Info
     );
 
     /// <summary>

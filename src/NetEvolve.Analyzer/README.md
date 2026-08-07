@@ -129,10 +129,16 @@ description, fix guidance, and configuration options.
 | [NE0009](https://github.com/dailydevops/analyzer/blob/main/docs/rules/usage/ne0009.md) | Usage | Check for cancellation at the start of a method with a CancellationToken parameter | Yes |
 | [NE0010](https://github.com/dailydevops/analyzer/blob/main/docs/rules/usage/ne0010.md) | Usage | Accept a CancellationToken parameter on a Task/ValueTask/IAsyncEnumerable-returning method | Yes |
 | [NE0011](https://github.com/dailydevops/analyzer/blob/main/docs/rules/style/ne0011.md) | Style | Avoid `#region` directives | Yes |
+| [NE0012](https://github.com/dailydevops/analyzer/blob/main/docs/rules/style/ne0012.md) | Style | Use an explicit numeric literal suffix | Yes |
+| [NE0013](https://github.com/dailydevops/analyzer/blob/main/docs/rules/style/ne0013.md) | Style | Use a numeric literal suffix instead of casting the literal | Yes |
 
-A `DiagnosticSuppressor` (NES0001) also ships alongside NE0007: it suppresses Meziantou.Analyzer's `MA0154`
-wherever NE0007 already reports the same location, so a consumer running both analyzers doesn't get the
-same violation twice — see [`docs/rules/documentation/ne0007.md`](../../docs/rules/documentation/ne0007.md#interaction-with-meziantouanalyzers-ma0154).
+Two `DiagnosticSuppressor`s also ship alongside their companion rule, so a consumer running the equivalent
+third-party analyzer doesn't get the same violation twice:
+
+- **NES0001** suppresses Meziantou.Analyzer's `MA0154` wherever NE0007 already reports the same location —
+  see [`docs/rules/documentation/ne0007.md`](../../docs/rules/documentation/ne0007.md#interaction-with-meziantouanalyzers-ma0154).
+- **NES0002** suppresses SonarAnalyzer.CSharp's `S818` wherever NE0012 already reports the same numeric
+  literal — see [`docs/rules/style/ne0012.md`](../../docs/rules/style/ne0012.md#interaction-with-sonaranalyzercsharps-s818).
 
 See [`AnalyzerReleases.Shipped.md`](AnalyzerReleases.Shipped.md) for the list of rules included in the
 current release, and [`AnalyzerReleases.Unshipped.md`](AnalyzerReleases.Unshipped.md) for rules staged
