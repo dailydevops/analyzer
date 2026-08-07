@@ -374,6 +374,27 @@ public sealed class RequireCancellationTokenParameterAnalyzerTests
             """
         );
 
+    // ---- Negative: the compilation's entry point is fixed by the CLR/host -----------------------------------
+
+    [Test]
+    public Task StaticMainReturningTask_NoDiagnostic() =>
+        CSharpAnalyzerVerifier<RequireCancellationTokenParameterAnalyzer>.VerifyAnalyzerAsExecutableAsync(
+            """
+            using System.Threading.Tasks;
+
+            public static class Program
+            {
+                public static Task Main() => Task.CompletedTask;
+            }
+            """
+        );
+
+    [Test]
+    public Task TopLevelStatements_SynthesizedMain_NoDiagnostic() =>
+        CSharpAnalyzerVerifier<RequireCancellationTokenParameterAnalyzer>.VerifyAnalyzerAsExecutableAsync(
+            "await System.Threading.Tasks.Task.CompletedTask;"
+        );
+
     // ---- Generated code is skipped, per convention -------------------------------------------------------
 
     [Test]

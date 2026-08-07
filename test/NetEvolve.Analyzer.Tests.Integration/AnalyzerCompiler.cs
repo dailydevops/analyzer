@@ -21,6 +21,7 @@ internal static class AnalyzerCompiler
     public static CSharpCompilation CreateCompilation(
         string source,
         string? path = null,
+        OutputKind outputKind = OutputKind.DynamicallyLinkedLibrary,
         CancellationToken cancellationToken = default
     ) =>
         CSharpCompilation.Create(
@@ -30,7 +31,7 @@ internal static class AnalyzerCompiler
                 CSharpSyntaxTree.ParseText(source, path: path ?? string.Empty, cancellationToken: cancellationToken),
             ],
             references: _references,
-            options: new CSharpCompilationOptions(OutputKind.DynamicallyLinkedLibrary)
+            options: new CSharpCompilationOptions(outputKind)
         );
 
     /// <summary>Returns the plain compiler diagnostics (syntax and semantic) for <paramref name="source"/>.</summary>
@@ -48,6 +49,7 @@ internal static class AnalyzerCompiler
         DiagnosticAnalyzer analyzer,
         string? path = null,
         (string Key, string Value)[]? properties = null,
+        OutputKind outputKind = OutputKind.DynamicallyLinkedLibrary,
         CancellationToken cancellationToken = default
     )
     {
@@ -59,7 +61,7 @@ internal static class AnalyzerCompiler
         // S8949/CA2016: the cancellation-token WithAnalyzers overload is obsolete; cancellation is honored by the
         // GetAnalyzerDiagnosticsAsync call below, which is the only place work actually happens.
 #pragma warning disable S8949, CA2016
-        var withAnalyzers = CreateCompilation(source, path, cancellationToken)
+        var withAnalyzers = CreateCompilation(source, path, outputKind, cancellationToken)
             .WithAnalyzers(ImmutableArray.Create(analyzer), options);
 #pragma warning restore S8949, CA2016
 

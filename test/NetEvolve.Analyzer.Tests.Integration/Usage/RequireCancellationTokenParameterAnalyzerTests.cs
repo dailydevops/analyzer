@@ -3,6 +3,7 @@ namespace NetEvolve.Analyzer.Tests.Integration.Usage;
 using System;
 using System.Linq;
 using System.Threading.Tasks;
+using Microsoft.CodeAnalysis;
 using NetEvolve.Analyzer;
 using NetEvolve.Analyzer.Usage;
 using TUnit.Assertions;
@@ -129,5 +130,44 @@ public sealed class RequireCancellationTokenParameterAnalyzerTests
 
         // The abstract declaration is still flagged; only the override is excluded.
         await Assert.That(diagnostics.Count(IsNe0010)).IsEqualTo(1);
+    }
+
+    [Test]
+    public async Task StaticMainReturningTask_ReportsNothing()
+    {
+        const string source = """
+            using System.Threading.Tasks;
+
+            public static class Program
+            {
+                public static Task Main() => Task.CompletedTask;
+            }
+            """;
+
+        var diagnostics = await AnalyzerCompiler
+            .GetAnalyzerDiagnosticsAsync(
+                source,
+                new RequireCancellationTokenParameterAnalyzer(),
+                outputKind: OutputKind.ConsoleApplication
+            )
+            .ConfigureAwait(false);
+
+        await Assert.That(diagnostics.Any(IsNe0010)).IsFalse();
+    }
+
+    [Test]
+    public async Task TopLevelStatements_SynthesizedMain_ReportsNothing()
+    {
+        const string source = "await System.Threading.Tasks.Task.CompletedTask;";
+
+        var diagnostics = await AnalyzerCompiler
+            .GetAnalyzerDiagnosticsAsync(
+                source,
+                new RequireCancellationTokenParameterAnalyzer(),
+                outputKind: OutputKind.ConsoleApplication
+            )
+            .ConfigureAwait(false);
+
+        await Assert.That(diagnostics.Any(IsNe0010)).IsFalse();
     }
 }

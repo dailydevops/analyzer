@@ -16,7 +16,9 @@ using NetEvolve.Analyzer.Helpers;
 /// interface implementation are left alone because their signature is fixed by the member they override or
 /// implement; a method that implicitly implements an interface member is left alone for the same reason. An
 /// interface's own method declaration is still flagged, since it is the contract other members are
-/// constrained by. Partial methods are reported only once, on the implementing declaration.
+/// constrained by. Partial methods are reported only once, on the implementing declaration. The
+/// compilation's entry point (<c>Main</c>, including top-level statements' synthesized one) is left alone
+/// too, since its signature is dictated by the CLR/host, not by this codebase.
 ///
 /// A method that has a body is only flagged when that body contains at least one call site a
 /// <see cref="System.Threading.CancellationToken"/> could actually be passed to (see
@@ -67,23 +69,32 @@ public sealed class RequireCancellationTokenParameterAnalyzer : DiagnosticAnalyz
         // method with a body is only reported once the code block action below has confirmed the body actually
         // has somewhere to use the token — that action supplies a SemanticModel without this one having to call
         // Compilation.GetSemanticModel() itself (see RS1030).
+        // The compilation's entry point (e.g. `Main`) has a signature dictated by the CLR/host, not by this
+        // codebase, so it's excluded the same way an override or explicit interface implementation is.
+        var entryPoint = compilation.GetEntryPoint(context.CancellationToken);
+
         context.RegisterSymbolAction(
-            symbolContext => AnalyzeMethodSymbol(symbolContext, cancellationTokenType, wellKnownReturnTypes),
+            symbolContext =>
+                AnalyzeMethodSymbol(symbolContext, cancellationTokenType, wellKnownReturnTypes, entryPoint),
             SymbolKind.Method
         );
         context.RegisterCodeBlockAction(codeBlockContext =>
-            AnalyzeMethodBody(codeBlockContext, cancellationTokenType, wellKnownReturnTypes)
+            AnalyzeMethodBody(codeBlockContext, cancellationTokenType, wellKnownReturnTypes, entryPoint)
         );
     }
 
     private static void AnalyzeMethodSymbol(
         SymbolAnalysisContext context,
         INamedTypeSymbol cancellationTokenType,
-        WellKnownReturnTypes wellKnownReturnTypes
+        WellKnownReturnTypes wellKnownReturnTypes,
+        IMethodSymbol? entryPoint
     )
     {
         var method = (IMethodSymbol)context.Symbol;
-        if (!IsCandidate(method, cancellationTokenType, wellKnownReturnTypes, out var returnTypeDescription))
+        if (
+            SymbolEqualityComparer.Default.Equals(method, entryPoint)
+            || !IsCandidate(method, cancellationTokenType, wellKnownReturnTypes, out var returnTypeDescription)
+        )
         {
             return;
         }
@@ -101,7 +112,8 @@ public sealed class RequireCancellationTokenParameterAnalyzer : DiagnosticAnalyz
     private static void AnalyzeMethodBody(
         CodeBlockAnalysisContext context,
         INamedTypeSymbol cancellationTokenType,
-        WellKnownReturnTypes wellKnownReturnTypes
+        WellKnownReturnTypes wellKnownReturnTypes,
+        IMethodSymbol? entryPoint
     )
     {
         if (
@@ -112,7 +124,10 @@ public sealed class RequireCancellationTokenParameterAnalyzer : DiagnosticAnalyz
             return;
         }
 
-        if (!IsCandidate(method, cancellationTokenType, wellKnownReturnTypes, out var returnTypeDescription))
+        if (
+            SymbolEqualityComparer.Default.Equals(method, entryPoint)
+            || !IsCandidate(method, cancellationTokenType, wellKnownReturnTypes, out var returnTypeDescription)
+        )
         {
             return;
         }

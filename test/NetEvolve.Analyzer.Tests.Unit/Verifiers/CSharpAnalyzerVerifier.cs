@@ -2,6 +2,8 @@ namespace NetEvolve.Analyzer.Tests.Unit.Verifiers;
 
 using System.Threading;
 using System.Threading.Tasks;
+using Microsoft.CodeAnalysis;
+using Microsoft.CodeAnalysis.CSharp;
 using Microsoft.CodeAnalysis.CSharp.Testing;
 using Microsoft.CodeAnalysis.Diagnostics;
 using Microsoft.CodeAnalysis.Testing;
@@ -26,6 +28,34 @@ internal static class CSharpAnalyzerVerifier<TAnalyzer>
             TestCode = source,
             ReferenceAssemblies = ReferenceAssemblies.Net.Net80,
         };
+
+        test.ExpectedDiagnostics.AddRange(expected);
+
+        await test.RunAsync(CancellationToken.None).ConfigureAwait(false);
+    }
+
+    /// <summary>
+    /// Runs the analyzer against <paramref name="source"/> compiled as a console application (rather than the
+    /// default library), so a top-level <c>Main</c> is recognized by <see cref="Compilation.GetEntryPoint"/>.
+    /// </summary>
+    public static async Task VerifyAnalyzerAsExecutableAsync(string source, params DiagnosticResult[] expected)
+    {
+        var test = new CSharpAnalyzerTest<TAnalyzer, DefaultVerifier>
+        {
+            TestCode = source,
+            ReferenceAssemblies = ReferenceAssemblies.Net.Net80,
+        };
+
+        test.SolutionTransforms.Add(
+            (solution, projectId) =>
+            {
+                var compilationOptions = (CSharpCompilationOptions)solution.GetProject(projectId)!.CompilationOptions!;
+                return solution.WithProjectCompilationOptions(
+                    projectId,
+                    compilationOptions.WithOutputKind(OutputKind.ConsoleApplication)
+                );
+            }
+        );
 
         test.ExpectedDiagnostics.AddRange(expected);
 
