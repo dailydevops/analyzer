@@ -17,9 +17,11 @@ public sealed class DiagnosticInfrastructureTests
     [Test]
     public async Task HelpLink_BuildsExpectedDocumentationUrl()
     {
-        var link = DiagnosticIds.HelpLink("NE0001");
+        var link = DiagnosticIds.HelpLink("NE0001", DiagnosticCategories.Maintainability);
 
-        await Assert.That(link).IsEqualTo("https://github.com/dailydevops/analyzer/blob/main/docs/rules/NE0001.md");
+        await Assert
+            .That(link)
+            .IsEqualTo("https://github.com/dailydevops/analyzer/blob/main/docs/rules/maintainability/ne0001.md");
     }
 
     [Test]

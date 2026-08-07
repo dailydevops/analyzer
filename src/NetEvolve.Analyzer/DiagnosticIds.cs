@@ -98,6 +98,13 @@ internal static class DiagnosticIds
 
     /// <summary>Builds the documentation help link for a diagnostic identifier.</summary>
     /// <param name="diagnosticId">The diagnostic identifier, e.g. <c>NE0001</c>.</param>
-    /// <returns>An absolute URI pointing at the rule's documentation.</returns>
-    public static string HelpLink(string diagnosticId) => $"{HelpLinkBase}{diagnosticId}.md";
+    /// <param name="category">The rule's <see cref="DiagnosticCategories">category</see>.</param>
+    /// <returns>An absolute URI pointing at the rule's documentation, entirely lowercase.</returns>
+    [System.Diagnostics.CodeAnalysis.SuppressMessage(
+        "Globalization",
+        "CA1308:Normalize strings to uppercase",
+        Justification = "The documentation folder structure under docs/rules/ is intentionally lowercase; this is not a security-sensitive normalization."
+    )]
+    public static string HelpLink(string diagnosticId, string category) =>
+        $"{HelpLinkBase}{category.ToLowerInvariant()}/{diagnosticId.ToLowerInvariant()}.md";
 }

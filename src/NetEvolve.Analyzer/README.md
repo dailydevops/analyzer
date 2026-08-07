@@ -118,21 +118,21 @@ description, fix guidance, and configuration options.
 
 | Rule | Category | Description | Code fix |
 |------|----------|--------------|----------|
-| [NE0001](https://github.com/dailydevops/analyzer/blob/main/docs/rules/NE0001.md) | Maintainability | Declare one type per file with a matching file name | Yes |
-| [NE0002](https://github.com/dailydevops/analyzer/blob/main/docs/rules/NE0002.md) | Maintainability | Namespace should match the folder structure | Yes |
-| [NE0003](https://github.com/dailydevops/analyzer/blob/main/docs/rules/NE0003.md) | Maintainability | Declare a single namespace per file | Yes |
-| [NE0004](https://github.com/dailydevops/analyzer/blob/main/docs/rules/NE0004.md) | Usage | Use the `is null` pattern instead of `== null` | Yes |
-| [NE0005](https://github.com/dailydevops/analyzer/blob/main/docs/rules/NE0005.md) | Usage | Use the `is not null` pattern instead of `!= null` | Yes |
-| [NE0006](https://github.com/dailydevops/analyzer/blob/main/docs/rules/NE0006.md) | Usage | Use the `is not null` pattern instead of `is object` | Yes |
-| [NE0007](https://github.com/dailydevops/analyzer/blob/main/docs/rules/NE0007.md) | Documentation | Use `<see langword="..."/>` instead of `<c>...</c>` or `<code>...</code>` for C# keywords | Yes |
-| [NE0008](https://github.com/dailydevops/analyzer/blob/main/docs/rules/NE0008.md) | Documentation | Use `<see cref="..."/>` instead of `<c>...</c>` or `<code>...</code>` for native type names | Yes |
-| [NE0009](https://github.com/dailydevops/analyzer/blob/main/docs/rules/NE0009.md) | Usage | Check for cancellation at the start of a method with a CancellationToken parameter | Yes |
-| [NE0010](https://github.com/dailydevops/analyzer/blob/main/docs/rules/NE0010.md) | Usage | Accept a CancellationToken parameter on a Task/ValueTask/IAsyncEnumerable-returning method | Yes |
-| [NE0011](https://github.com/dailydevops/analyzer/blob/main/docs/rules/NE0011.md) | Style | Avoid `#region` directives | Yes |
+| [NE0001](https://github.com/dailydevops/analyzer/blob/main/docs/rules/maintainability/ne0001.md) | Maintainability | Declare one type per file with a matching file name | Yes |
+| [NE0002](https://github.com/dailydevops/analyzer/blob/main/docs/rules/maintainability/ne0002.md) | Maintainability | Namespace should match the folder structure | Yes |
+| [NE0003](https://github.com/dailydevops/analyzer/blob/main/docs/rules/maintainability/ne0003.md) | Maintainability | Declare a single namespace per file | Yes |
+| [NE0004](https://github.com/dailydevops/analyzer/blob/main/docs/rules/usage/ne0004.md) | Usage | Use the `is null` pattern instead of `== null` | Yes |
+| [NE0005](https://github.com/dailydevops/analyzer/blob/main/docs/rules/usage/ne0005.md) | Usage | Use the `is not null` pattern instead of `!= null` | Yes |
+| [NE0006](https://github.com/dailydevops/analyzer/blob/main/docs/rules/usage/ne0006.md) | Usage | Use the `is not null` pattern instead of `is object` | Yes |
+| [NE0007](https://github.com/dailydevops/analyzer/blob/main/docs/rules/documentation/ne0007.md) | Documentation | Use `<see langword="..."/>` instead of `<c>...</c>` or `<code>...</code>` for C# keywords | Yes |
+| [NE0008](https://github.com/dailydevops/analyzer/blob/main/docs/rules/documentation/ne0008.md) | Documentation | Use `<see cref="..."/>` instead of `<c>...</c>` or `<code>...</code>` for native type names | Yes |
+| [NE0009](https://github.com/dailydevops/analyzer/blob/main/docs/rules/usage/ne0009.md) | Usage | Check for cancellation at the start of a method with a CancellationToken parameter | Yes |
+| [NE0010](https://github.com/dailydevops/analyzer/blob/main/docs/rules/usage/ne0010.md) | Usage | Accept a CancellationToken parameter on a Task/ValueTask/IAsyncEnumerable-returning method | Yes |
+| [NE0011](https://github.com/dailydevops/analyzer/blob/main/docs/rules/style/ne0011.md) | Style | Avoid `#region` directives | Yes |
 
 A `DiagnosticSuppressor` (NES0001) also ships alongside NE0007: it suppresses Meziantou.Analyzer's `MA0154`
 wherever NE0007 already reports the same location, so a consumer running both analyzers doesn't get the
-same violation twice — see [`docs/rules/NE0007.md`](../../docs/rules/NE0007.md#interaction-with-meziantouanalyzers-ma0154).
+same violation twice — see [`docs/rules/documentation/ne0007.md`](../../docs/rules/documentation/ne0007.md#interaction-with-meziantouanalyzers-ma0154).
 
 See [`AnalyzerReleases.Shipped.md`](AnalyzerReleases.Shipped.md) for the list of rules included in the
 current release, and [`AnalyzerReleases.Unshipped.md`](AnalyzerReleases.Unshipped.md) for rules staged
