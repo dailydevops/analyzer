@@ -141,19 +141,19 @@ public sealed class OneTypePerFileCodeFixTests
             ],
             [
                 (
-                    "Square.cs",
-                    """
-                    namespace Geometry;
-
-                    public sealed class Square { }
-                    """
-                ),
-                (
                     "Circle.cs",
                     """
                     namespace Geometry;
 
                     public sealed class Circle { }
+                    """
+                ),
+                (
+                    "Square.cs",
+                    """
+                    namespace Geometry;
+
+                    public sealed class Square { }
                     """
                 ),
             ]
