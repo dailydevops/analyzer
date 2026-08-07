@@ -493,6 +493,108 @@ public sealed class OneTypePerFileCodeFixTests
         );
 
     [Test]
+    public Task Move_UsingInsideBlockNamespace_CarriesToNewFile() =>
+        OneTypePerFileCodeFixVerifier.VerifyAsync(
+            [
+                (
+                    "Circle.cs",
+                    """
+                    namespace Geometry
+                    {
+                        using System;
+
+                        public sealed class Circle { }
+
+                        public sealed class {|NE0001:Clock|}
+                        {
+                            public DateTime Now { get; }
+                        }
+                    }
+                    """
+                ),
+            ],
+            [
+                (
+                    "Circle.cs",
+                    """
+                    namespace Geometry
+                    {
+                        using System;
+
+                        public sealed class Circle { }
+                    }
+                    """
+                ),
+                (
+                    "Clock.cs",
+                    """
+                    using System;
+
+                    namespace Geometry;
+
+                    public sealed class Clock
+                    {
+                        public DateTime Now { get; }
+                    }
+                    """
+                ),
+            ]
+        );
+
+    [Test]
+    public Task Move_UsingInsideBlockNamespace_DedupedAgainstFileLevelUsing() =>
+        OneTypePerFileCodeFixVerifier.VerifyAsync(
+            [
+                (
+                    "Circle.cs",
+                    """
+                    using System;
+
+                    namespace Geometry
+                    {
+                        using System;
+
+                        public sealed class Circle { }
+
+                        public sealed class {|NE0001:Clock|}
+                        {
+                            public DateTime Now { get; }
+                        }
+                    }
+                    """
+                ),
+            ],
+            [
+                (
+                    "Circle.cs",
+                    """
+                    using System;
+
+                    namespace Geometry
+                    {
+                        using System;
+
+                        public sealed class Circle { }
+                    }
+                    """
+                ),
+                (
+                    "Clock.cs",
+                    """
+                    using System;
+
+                    namespace Geometry;
+
+                    public sealed class Clock
+                    {
+                        public DateTime Now { get; }
+                    }
+                    """
+                ),
+            ]
+        );
+
+    [Test]
     public Task Move_NestedBlockNamespace_KeepsFullDottedNamespace() =>
         OneTypePerFileCodeFixVerifier.VerifyAsync(
             [

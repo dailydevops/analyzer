@@ -1,5 +1,6 @@
 namespace NetEvolve.Analyzer.Builders;
 
+using System;
 using System.Collections.Generic;
 using System.Linq;
 using System.Text;
@@ -27,13 +28,14 @@ internal static class NamespaceFileBuilder
     )
     {
         var builder = new StringBuilder();
+        var usings = CollectUsings(root, members);
 
-        foreach (var directive in root.Usings)
+        foreach (var directive in usings)
         {
             _ = builder.Append(directive.ToString()).Append('\n');
         }
 
-        if (root.Usings.Count != 0)
+        if (usings.Count != 0)
         {
             _ = builder.Append('\n');
         }
@@ -52,6 +54,33 @@ internal static class NamespaceFileBuilder
     /// </summary>
     public static string WithTrailingNewline(string text, bool trailingNewline) =>
         trailingNewline ? text.TrimEnd() + "\n" : text.TrimEnd();
+
+    // File-level usings live on the CompilationUnitSyntax, but usings declared inside a block-scoped
+    // `namespace X { using Y; ... }` live on that NamespaceDeclarationSyntax instead — never visited via
+    // root.Usings. Collect both, deduped by text, so moved/flattened members keep the usings their original
+    // context relied on.
+    private static List<UsingDirectiveSyntax> CollectUsings(
+        CompilationUnitSyntax root,
+        IReadOnlyList<MemberDeclarationSyntax> members
+    )
+    {
+        var seen = new HashSet<string>(StringComparer.Ordinal);
+        var usings = new List<UsingDirectiveSyntax>();
+
+        void AddRange(SyntaxList<UsingDirectiveSyntax> directives) =>
+            usings.AddRange(directives.Where(directive => seen.Add(directive.ToString())));
+
+        AddRange(root.Usings);
+        foreach (var member in members)
+        {
+            foreach (var namespaceDeclaration in member.Ancestors().OfType<BaseNamespaceDeclarationSyntax>())
+            {
+                AddRange(namespaceDeclaration.Usings);
+            }
+        }
+
+        return usings;
+    }
 
     /// <summary>The top-level type declarations (block- or file-scoped) of <paramref name="root"/>.</summary>
     public static IEnumerable<MemberDeclarationSyntax> TopLevelTypeDeclarations(CompilationUnitSyntax root) =>
