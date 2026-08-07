@@ -38,4 +38,50 @@ public sealed class SingleNamespacePerFileCodeFixTests
                 ),
             ]
         );
+
+    [Test]
+    public Task Nested_Flatten_CarriesBlockScopedUsingsFromBothLevels() =>
+        SingleNamespacePerFileCodeFixVerifier.VerifyAsync(
+            [
+                (
+                    "Circle.cs",
+                    """
+                    namespace Outer
+                    {
+                        using System.Text;
+
+                        namespace {|NE0003:Inner|}
+                        {
+                            using System;
+
+                            public sealed class Circle
+                            {
+                                public DateTime Now { get; }
+
+                                public StringBuilder Builder { get; }
+                            }
+                        }
+                    }
+                    """
+                ),
+            ],
+            [
+                (
+                    "Circle.cs",
+                    """
+                    using System;
+                    using System.Text;
+
+                    namespace Outer.Inner;
+
+                    public sealed class Circle
+                    {
+                        public DateTime Now { get; }
+
+                        public StringBuilder Builder { get; }
+                    }
+                    """
+                ),
+            ]
+        );
 }
