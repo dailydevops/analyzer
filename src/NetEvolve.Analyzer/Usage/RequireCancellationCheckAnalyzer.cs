@@ -11,7 +11,7 @@ using Microsoft.CodeAnalysis.Diagnostics;
 /// <summary>
 /// NE0009 — reports a method with a block body that accepts a <see cref="System.Threading.CancellationToken"/>
 /// parameter but does not check for cancellation as the first statement of its body (immediately after any
-/// leading argument-validation guard clauses). Either <c>token.ThrowIfCancellationRequested()</c> or
+/// leading guard clauses). Either <c>token.ThrowIfCancellationRequested()</c> or
 /// <c>if (token.IsCancellationRequested) { return ...; }</c> (or, inside an iterator method,
 /// <c>if (token.IsCancellationRequested) { yield break; }</c>) satisfies the rule. If that first statement is
 /// itself a <see langword="for"/>/<see langword="foreach"/>/<see langword="while"/>/<see langword="do"/> loop,
@@ -107,7 +107,7 @@ public sealed class RequireCancellationCheckAnalyzer : DiagnosticAnalyzer
     }
 
     /// <summary>
-    /// Walks the leading argument-validation guard clauses and checks whether the first non-guard statement is
+    /// Walks the leading guard clauses and checks whether the first non-guard statement is
     /// a cancellation check against one of <paramref name="tokenNames"/> — see
     /// <see cref="IsCheckOrLeadingLoopCheck"/> for what counts as a match.
     /// </summary>
@@ -180,16 +180,19 @@ public sealed class RequireCancellationCheckAnalyzer : DiagnosticAnalyzer
     }
 
     /// <summary>
-    /// Whether <paramref name="statement"/> is a leading argument-validation guard clause: either an
-    /// <see langword="if"/>-statement whose sole statement throws an exception that is or derives from
-    /// <see cref="System.ArgumentException"/>, or a call to a static <c>ThrowIfXxx</c> method on a type whose
-    /// name ends with <c>Exception</c> (e.g. <c>ArgumentNullException.ThrowIfNull(...)</c>).
+    /// Whether <paramref name="statement"/> is a leading guard clause: either an <see langword="if"/>-statement
+    /// whose sole statement throws an exception that is or derives from <see cref="Exception"/> (which
+    /// covers both argument-validation guards like <c>ArgumentNullException</c> and state-validation guards
+    /// like <c>InvalidOperationException</c> — either way, the guard only ever throws or falls through, so it
+    /// does no "other work" that the rule cares about ordering the cancellation check against), or a call to a
+    /// static <c>ThrowIfXxx</c> method on a type whose name ends with <c>Exception</c> (e.g.
+    /// <c>ArgumentNullException.ThrowIfNull(...)</c>).
     /// </summary>
     private static bool IsGuardClause(SemanticModel semanticModel, StatementSyntax statement)
     {
         if (statement is IfStatementSyntax { Else: null } ifStatement)
         {
-            return IsSingleArgumentExceptionThrow(semanticModel, ifStatement.Statement);
+            return IsSingleExceptionThrow(semanticModel, ifStatement.Statement);
         }
 
         if (
@@ -213,7 +216,7 @@ public sealed class RequireCancellationCheckAnalyzer : DiagnosticAnalyzer
     // A guard's 'if' body throws exactly one exception, whether braced ("if (x is null) { throw ...; }") or not
     // ("if (x is null) throw ...;"); an else branch or any additional logic disqualifies the statement as a
     // guard clause (handled by the caller for 'else', here for extra statements inside a block).
-    private static bool IsSingleArgumentExceptionThrow(SemanticModel semanticModel, StatementSyntax ifBody)
+    private static bool IsSingleExceptionThrow(SemanticModel semanticModel, StatementSyntax ifBody)
     {
         var throwStatement = ifBody switch
         {
@@ -229,16 +232,16 @@ public sealed class RequireCancellationCheckAnalyzer : DiagnosticAnalyzer
         }
 
         var thrownType = semanticModel.GetTypeInfo(objectCreation).Type;
-        var argumentExceptionType = semanticModel.Compilation.GetTypeByMetadataName("System.ArgumentException");
+        var exceptionType = semanticModel.Compilation.GetTypeByMetadataName("System.Exception");
 
-        if (argumentExceptionType is null)
+        if (exceptionType is null)
         {
             return false;
         }
 
         for (var current = thrownType; current is not null; current = current.BaseType)
         {
-            if (SymbolEqualityComparer.Default.Equals(current, argumentExceptionType))
+            if (SymbolEqualityComparer.Default.Equals(current, exceptionType))
             {
                 return true;
             }
