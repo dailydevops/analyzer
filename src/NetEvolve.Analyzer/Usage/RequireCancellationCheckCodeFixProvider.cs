@@ -15,7 +15,7 @@ using NetEvolve.Analyzer.Helpers;
 
 /// <summary>
 /// Code fix for <see cref="RequireCancellationCheckAnalyzer">NE0009</see>. Offers two independent fixes at the
-/// position immediately after the method's leading argument-validation guard clauses: inserting
+/// position immediately after the method's leading guard clauses: inserting
 /// <c>token.ThrowIfCancellationRequested();</c>, or inserting
 /// <c>if (token.IsCancellationRequested) { return ...; }</c>. Both are always registered, so the user (or Fix
 /// All) can choose either form for a given occurrence. The inserted text is built directly (rather than via

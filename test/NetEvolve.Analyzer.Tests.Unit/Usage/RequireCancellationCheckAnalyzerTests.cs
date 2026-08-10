@@ -225,10 +225,9 @@ public sealed class RequireCancellationCheckAnalyzerTests
         );
 
     [Test]
-    public Task NonArgumentExceptionThrow_IsNotAGuardClause_Reports() =>
+    public Task NonExceptionThrow_IsNotAGuardClause_Reports() =>
         CSharpAnalyzerVerifier<RequireCancellationCheckAnalyzer>.VerifyAnalyzerAsync(
             """
-            using System;
             using System.Threading;
 
             public sealed class Sample
@@ -236,7 +235,31 @@ public sealed class RequireCancellationCheckAnalyzerTests
                 public void {|NE0009:Run|}(object value, CancellationToken cancellationToken)
                 {
                     if (value is null)
+                        return;
+
+                    DoWork(value);
+                }
+
+                private static void DoWork(object value) { }
+            }
+            """
+        );
+
+    [Test]
+    public Task NonArgumentExceptionThrow_IsAGuardClause_NoDiagnostic() =>
+        CSharpAnalyzerVerifier<RequireCancellationCheckAnalyzer>.VerifyAnalyzerAsync(
+            """
+            using System;
+            using System.Threading;
+
+            public sealed class Sample
+            {
+                public void Run(object value, CancellationToken cancellationToken)
+                {
+                    if (value is null)
                         throw new InvalidOperationException();
+
+                    cancellationToken.ThrowIfCancellationRequested();
 
                     DoWork(value);
                 }
