@@ -70,9 +70,7 @@ public sealed class OneTypePerFileAnalyzer : DiagnosticAnalyzer
         }
 
         var fileName = Path.GetFileNameWithoutExtension(filePath);
-        var primary = groups.FirstOrDefault(group =>
-            string.Equals(group.ExpectedFileName, fileName, StringComparison.Ordinal)
-        );
+        var primary = groups.Find(group => MatchesFileName(group, fileName));
 
         var singleType = groups.Count == 1;
         foreach (var group in groups)
@@ -125,6 +123,25 @@ public sealed class OneTypePerFileAnalyzer : DiagnosticAnalyzer
         return groups;
     }
 
+    // A `partial` type is, by convention, often split across several files named after its feature area
+    // (e.g. `CodeBuilder.Emit.cs`, `CodeBuilder.Parsing.cs`) rather than the bare type name. Accept that
+    // suffixed form in addition to the exact match; non-partial types still require an exact match.
+    private static bool MatchesFileName(TypeGroup group, string fileName)
+    {
+        if (string.Equals(group.ExpectedFileName, fileName, StringComparison.Ordinal))
+        {
+            return true;
+        }
+
+        if (!group.IsPartial)
+        {
+            return false;
+        }
+
+        var prefix = group.ExpectedFileName + ".";
+        return fileName.Length > prefix.Length && fileName.StartsWith(prefix, StringComparison.Ordinal);
+    }
+
     private static string GetNamespaceName(SyntaxNode node)
     {
         var segments = new List<string>();
@@ -158,11 +175,17 @@ public sealed class OneTypePerFileAnalyzer : DiagnosticAnalyzer
     /// <summary>A single top-level type declaration reduced to the facts NE0001 needs.</summary>
     private readonly struct TypeDescriptor
     {
-        private TypeDescriptor(SyntaxToken identifier, string name, ImmutableArray<string> typeParameters)
+        private TypeDescriptor(
+            SyntaxToken identifier,
+            string name,
+            ImmutableArray<string> typeParameters,
+            bool isPartial
+        )
         {
             Identifier = identifier;
             Name = name;
             TypeParameters = typeParameters;
+            IsPartial = isPartial;
         }
 
         public SyntaxToken Identifier { get; }
@@ -170,6 +193,8 @@ public sealed class OneTypePerFileAnalyzer : DiagnosticAnalyzer
         public string Name { get; }
 
         public ImmutableArray<string> TypeParameters { get; }
+
+        public bool IsPartial { get; }
 
         public string MetadataName =>
             TypeParameters.IsEmpty ? Name : Name + "`" + TypeParameters.Length.ToString(CultureInfo.InvariantCulture);
@@ -186,7 +211,8 @@ public sealed class OneTypePerFileAnalyzer : DiagnosticAnalyzer
                 return new TypeDescriptor(
                     type.Identifier,
                     type.Identifier.ValueText,
-                    GetTypeParameters(type.TypeParameterList)
+                    GetTypeParameters(type.TypeParameterList),
+                    type.Modifiers.Any(SyntaxKind.PartialKeyword)
                 );
             }
 
@@ -195,12 +221,18 @@ public sealed class OneTypePerFileAnalyzer : DiagnosticAnalyzer
                 return new TypeDescriptor(
                     @delegate.Identifier,
                     @delegate.Identifier.ValueText,
-                    GetTypeParameters(@delegate.TypeParameterList)
+                    GetTypeParameters(@delegate.TypeParameterList),
+                    isPartial: false
                 );
             }
 
             var @enum = (EnumDeclarationSyntax)node;
-            return new TypeDescriptor(@enum.Identifier, @enum.Identifier.ValueText, ImmutableArray<string>.Empty);
+            return new TypeDescriptor(
+                @enum.Identifier,
+                @enum.Identifier.ValueText,
+                ImmutableArray<string>.Empty,
+                isPartial: false
+            );
         }
 
         private static ImmutableArray<string> GetTypeParameters(TypeParameterListSyntax? list) =>
@@ -221,5 +253,7 @@ public sealed class OneTypePerFileAnalyzer : DiagnosticAnalyzer
         public TypeDescriptor First { get; }
 
         public string ExpectedFileName { get; }
+
+        public bool IsPartial => First.IsPartial;
     }
 }

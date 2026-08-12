@@ -127,6 +127,67 @@ public sealed class OneTypePerFileAnalyzerTests
     public Task FileWithoutTopLevelType_NoDiagnostic() =>
         OneTypePerFileVerifier.VerifyAsync("Empty.cs", "// intentionally without a top-level type");
 
+    [Test]
+    public Task PartialType_SuffixedFileName_NoDiagnostic() =>
+        OneTypePerFileVerifier.VerifyAsync(
+            "Circle.Drawing.cs",
+            """
+            namespace Geometry;
+
+            public sealed partial class Circle { }
+            """
+        );
+
+    [Test]
+    public Task PartialType_MultipleSuffixedFiles_NoDiagnostic() =>
+        OneTypePerFileVerifier.VerifyAsync([
+            (
+                "Circle.cs",
+                """
+                namespace Geometry;
+
+                public sealed partial class Circle { }
+                """
+            ),
+            (
+                "Circle.Drawing.cs",
+                """
+                namespace Geometry;
+
+                public sealed partial class Circle { }
+                """
+            ),
+            (
+                "Circle.Serialization.cs",
+                """
+                namespace Geometry;
+
+                public sealed partial class Circle { }
+                """
+            ),
+        ]);
+
+    [Test]
+    public Task PartialType_NoBaseFile_AllSuffixedFiles_NoDiagnostic() =>
+        OneTypePerFileVerifier.VerifyAsync([
+            (
+                "Circle.Drawing.cs",
+                """
+                namespace Geometry;
+
+                public sealed partial class Circle { }
+                """
+            ),
+            (
+                "Circle.Serialization.cs",
+                """
+                namespace Geometry;
+
+                public sealed partial class Circle { }
+                """
+            ),
+        ]);
+
     // ---- Non-compliant: name mismatch and multiple types ------------------------------------------------
 
     [Test]
@@ -201,6 +262,28 @@ public sealed class OneTypePerFileAnalyzerTests
             {
                 public sealed class {|NE0001:Item|} { }
             }
+            """
+        );
+
+    [Test]
+    public Task NonPartialType_SuffixedFileName_Diagnostic() =>
+        OneTypePerFileVerifier.VerifyAsync(
+            "Circle.Drawing.cs",
+            """
+            namespace Geometry;
+
+            public sealed class {|NE0001:Circle|} { }
+            """
+        );
+
+    [Test]
+    public Task PartialType_UnrelatedSuffixedFileName_Diagnostic() =>
+        OneTypePerFileVerifier.VerifyAsync(
+            "CircleDrawing.cs",
+            """
+            namespace Geometry;
+
+            public sealed partial class {|NE0001:Circle|} { }
             """
         );
 
