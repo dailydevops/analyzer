@@ -110,6 +110,38 @@ public sealed class OneTypePerFileAnalyzerTests
     }
 
     [Test]
+    public async Task PartialType_SuffixedFileName_ReportsNothing()
+    {
+        const string source = """
+            namespace Geometry;
+
+            public sealed partial class Circle { }
+            """;
+
+        var diagnostics = await AnalyzerCompiler
+            .GetAnalyzerDiagnosticsAsync(source, new OneTypePerFileAnalyzer(), path: "Circle.Drawing.cs")
+            .ConfigureAwait(false);
+
+        await Assert.That(diagnostics.Any(IsNe0001)).IsFalse();
+    }
+
+    [Test]
+    public async Task NonPartialType_SuffixedFileName_ReportsNe0001()
+    {
+        const string source = """
+            namespace Geometry;
+
+            public sealed class Circle { }
+            """;
+
+        var diagnostics = await AnalyzerCompiler
+            .GetAnalyzerDiagnosticsAsync(source, new OneTypePerFileAnalyzer(), path: "Circle.Drawing.cs")
+            .ConfigureAwait(false);
+
+        await Assert.That(diagnostics.Any(IsNe0001)).IsTrue();
+    }
+
+    [Test]
     public async Task GroupGenericOverloads_Property_SuppressesArityViolation()
     {
         const string source = """
