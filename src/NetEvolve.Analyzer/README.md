@@ -84,6 +84,9 @@ if (value is null)
 NE0001 and NE0002 keep a file's name and namespace aligned with its type and folder. A file at
 `Shapes/Circle.cs` declaring `namespace Geometry.Polygons;` is flagged by NE0002 with a fix that
 rewrites the namespace to `Geometry.Shapes` (the folder-derived value, anchored at `RootNamespace`).
+A `partial` type may also be split across several feature-suffixed files — `Circle.cs`,
+`Circle.Drawing.cs`, `Circle.Serialization.cs` — without NE0001 flagging the suffixed ones; a
+non-partial type still requires an exact `TypeName.cs` match.
 
 ## Configuration
 
