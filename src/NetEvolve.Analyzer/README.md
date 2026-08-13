@@ -134,6 +134,7 @@ description, fix guidance, and configuration options.
 | [NE0011](https://github.com/dailydevops/analyzer/blob/main/docs/rules/style/ne0011.md) | Style | Avoid `#region` directives | Yes |
 | [NE0012](https://github.com/dailydevops/analyzer/blob/main/docs/rules/style/ne0012.md) | Style | Use an explicit numeric literal suffix | Yes |
 | [NE0013](https://github.com/dailydevops/analyzer/blob/main/docs/rules/style/ne0013.md) | Style | Use a numeric literal suffix instead of casting the literal | Yes |
+| [NE0014](https://github.com/dailydevops/analyzer/blob/main/docs/rules/naming/ne0014.md) | Naming | Avoid non-representable characters in identifiers and namespace declarations | Yes |
 
 Two `DiagnosticSuppressor`s also ship alongside their companion rule, so a consumer running the equivalent
 third-party analyzer doesn't get the same violation twice:
