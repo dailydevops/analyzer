@@ -175,4 +175,13 @@
   <data name="NE0013_Description" xml:space="preserve">
     <value>An integer literal immediately cast to long, ulong, uint, float, double, or decimal (e.g. '(long)0') should use that type's literal suffix instead ('0L'), which says the same thing without the cast. Only a plain integer literal (no existing suffix, no decimal point or exponent) is rewritten, since rewriting a literal that already has a fractional part could change its value.</value>
   </data>
+  <data name="NE0014_Title" xml:space="preserve">
+    <value>Avoid non-representable characters</value>
+  </data>
+  <data name="NE0014_MessageFormat" xml:space="preserve">
+    <value>A non-representable character ({0}) appears {1}</value>
+  </data>
+  <data name="NE0014_Description" xml:space="preserve">
+    <value>A Unicode 'Format' category character — such as a zero-width space/joiner, a byte-order mark, or a bidirectional text-direction override — may legally appear inside a declared identifier (a type, member, parameter, type parameter, local variable, or namespace segment), where it compiles without error and can make two visually identical names refer to different symbols. A byte-order mark that arrives as literal text content, rather than as a file's actual encoding BOM, can also sit as stray whitespace immediately before a token; every other such character causes a compiler error there instead, so only a literal byte-order mark risks being silently swallowed that way. A genuine file-level encoding BOM is consumed before the compiler ever sees the text and cannot be flagged by this or any analyzer. Either way the character renders as invisible or inconsistently across editors, terminals, and diff tools and should be removed.</value>
+  </data>
 </root>

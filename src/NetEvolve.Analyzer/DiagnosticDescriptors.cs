@@ -106,6 +106,16 @@ internal static class DiagnosticDescriptors
     );
 
     /// <summary>
+    /// NE0014 — a declared identifier must not contain a non-representable Unicode "Format" category
+    /// character, such as a zero-width space/joiner, a byte-order mark, or a bidirectional text-direction
+    /// override.
+    /// </summary>
+    public static readonly DiagnosticDescriptor AvoidInvisibleCharacters = Create(
+        DiagnosticIds.NE0014,
+        DiagnosticCategories.Naming
+    );
+
+    /// <summary>
     /// Builds a <see cref="DiagnosticDescriptor"/> for <paramref name="id"/>. Title, message format, and
     /// description are sourced from <c>Resources.resx</c> (keys <c>{id}_Title</c>,
     /// <c>{id}_MessageFormat</c>, <c>{id}_Description</c>), with its help link built via

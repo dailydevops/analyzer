@@ -99,6 +99,14 @@ internal static class DiagnosticIds
     /// </summary>
     public const string NE0013 = DiagnosticPrefix + "0013";
 
+    // Naming
+
+    /// <summary>
+    /// NE0014 — a declared identifier (type, member, parameter, type parameter, local variable, or
+    /// namespace segment) must not contain a non-representable Unicode "Format" category character.
+    /// </summary>
+    public const string NE0014 = DiagnosticPrefix + "0014";
+
     // Suppressors
 
     /// <summary>
