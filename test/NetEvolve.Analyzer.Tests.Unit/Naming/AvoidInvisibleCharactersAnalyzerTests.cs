@@ -117,6 +117,105 @@ public sealed class AvoidInvisibleCharactersAnalyzerTests
             """
         );
 
+    [Test]
+    public Task DelegateNameContainsInvisibleCharacter_ReportsWarning() =>
+        CSharpAnalyzerVerifier<AvoidInvisibleCharactersAnalyzer>.VerifyAnalyzerAsync(
+            $$"""
+            public delegate void {|NE0014:My{{ZeroWidthSpace}}Delegate|}();
+            """
+        );
+
+    [Test]
+    public Task LocalFunctionNameContainsInvisibleCharacter_ReportsWarning() =>
+        CSharpAnalyzerVerifier<AvoidInvisibleCharactersAnalyzer>.VerifyAnalyzerAsync(
+            $$"""
+            public sealed class Sample
+            {
+                public void DoWork()
+                {
+                    void {|NE0014:Do{{ZeroWidthSpace}}Local|}() { }
+
+                    DoLocal();
+                }
+            }
+            """
+        );
+
+    [Test]
+    public Task EventNameContainsInvisibleCharacter_ReportsWarning() =>
+        CSharpAnalyzerVerifier<AvoidInvisibleCharactersAnalyzer>.VerifyAnalyzerAsync(
+            $$"""
+            using System;
+
+            public sealed class Sample
+            {
+                public event EventHandler? {|NE0014:My{{ZeroWidthSpace}}Event|}
+                {
+                    add { }
+                    remove { }
+                }
+            }
+            """
+        );
+
+    [Test]
+    public Task CatchVariableNameContainsInvisibleCharacter_ReportsWarning() =>
+        CSharpAnalyzerVerifier<AvoidInvisibleCharactersAnalyzer>.VerifyAnalyzerAsync(
+            $$"""
+            using System;
+
+            public sealed class Sample
+            {
+                public void DoWork()
+                {
+                    try
+                    {
+                    }
+                    catch (Exception {|NE0014:e{{ZeroWidthSpace}}x|})
+                    {
+                        _ = ex;
+                    }
+                }
+            }
+            """
+        );
+
+    [Test]
+    public Task PatternVariableNameContainsInvisibleCharacter_ReportsWarning() =>
+        CSharpAnalyzerVerifier<AvoidInvisibleCharactersAnalyzer>.VerifyAnalyzerAsync(
+            $$"""
+            public sealed class Sample
+            {
+                public void DoWork(object value)
+                {
+                    if (value is int {|NE0014:nu{{ZeroWidthSpace}}mber|})
+                    {
+                        _ = number;
+                    }
+                }
+            }
+            """
+        );
+
+    [Test]
+    public Task ForEachVariableNameContainsInvisibleCharacter_ReportsWarning() =>
+        CSharpAnalyzerVerifier<AvoidInvisibleCharactersAnalyzer>.VerifyAnalyzerAsync(
+            $$"""
+            using System.Collections.Generic;
+
+            public sealed class Sample
+            {
+                public void DoWork(IEnumerable<int> items)
+                {
+                    foreach (var {|NE0014:i{{ZeroWidthSpace}}tem|} in items)
+                    {
+                        _ = item;
+                    }
+                }
+            }
+            """
+        );
+
     // ---- Stray whitespace/newline trivia (e.g. a byte-order mark left over from a bad paste) ---------------
 
     [Test]
@@ -164,6 +263,26 @@ public sealed class AvoidInvisibleCharactersAnalyzerTests
                 {
                     var local = value;
                 }
+            }
+            """
+        );
+
+    [Test]
+    public Task IdentifierWithSameCharacterTwice_ReportsDistinctCodePointOnce() =>
+        CSharpAnalyzerVerifier<AvoidInvisibleCharactersAnalyzer>.VerifyAnalyzerAsync(
+            $$"""
+            public sealed class {|NE0014:My{{ZeroWidthSpace}}Cl{{ZeroWidthSpace}}ass|}
+            {
+            }
+            """
+        );
+
+    [Test]
+    public Task IdentifierWithTwoDistinctCharacters_ReportsBoth() =>
+        CSharpAnalyzerVerifier<AvoidInvisibleCharactersAnalyzer>.VerifyAnalyzerAsync(
+            $$"""
+            public sealed class {|NE0014:My{{ZeroWidthSpace}}Cl{{ZeroWidthJoiner}}ass|}
+            {
             }
             """
         );

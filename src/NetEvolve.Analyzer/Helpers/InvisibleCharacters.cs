@@ -15,6 +15,15 @@ using System.Text;
 /// cref="Microsoft.CodeAnalysis.SyntaxToken.Text"/> (the raw, un-stripped source text) instead. Used by
 /// NE0014's analyzer and code fix.
 /// </summary>
+/// <remarks>
+/// Only checks individual UTF-16 code units (never combines surrogate pairs into a single code point):
+/// every "Format" category character the C# lexer actually accepts as an identifier-part character or as
+/// whitespace — the two situations this rule can ever observe — lies in the Basic Multilingual Plane. A
+/// supplementary-plane "Format" character (surrogate pair) is rejected by the lexer with <c>CS1056</c>
+/// wherever it appears, so it never reaches this code as valid token or trivia text; a lone surrogate half
+/// is reported as <see cref="UnicodeCategory.Surrogate"/>, never <see cref="UnicodeCategory.Format"/>, so it
+/// is safely ignored either way.
+/// </remarks>
 internal static class InvisibleCharacters
 {
     /// <summary>
@@ -26,25 +35,18 @@ internal static class InvisibleCharacters
     {
         ImmutableArray<int>.Builder? builder = null;
 
-        var index = 0;
-        while (index < text.Length)
+        foreach (var character in text)
         {
-            var length =
-                char.IsHighSurrogate(text[index]) && index + 1 < text.Length && char.IsLowSurrogate(text[index + 1])
-                    ? 2
-                    : 1;
-
-            if (CharUnicodeInfo.GetUnicodeCategory(text, index) == UnicodeCategory.Format)
+            if (char.GetUnicodeCategory(character) != UnicodeCategory.Format)
             {
-                var codePoint = char.ConvertToUtf32(text, index);
-                builder ??= ImmutableArray.CreateBuilder<int>();
-                if (!builder.Contains(codePoint))
-                {
-                    builder.Add(codePoint);
-                }
+                continue;
             }
 
-            index += length;
+            builder ??= ImmutableArray.CreateBuilder<int>();
+            if (!builder.Contains(character))
+            {
+                builder.Add(character);
+            }
         }
 
         codePoints = builder is null ? ImmutableArray<int>.Empty : builder.ToImmutable();
@@ -65,20 +67,12 @@ internal static class InvisibleCharacters
     {
         var builder = new StringBuilder(text.Length);
 
-        var index = 0;
-        while (index < text.Length)
+        foreach (var character in text)
         {
-            var length =
-                char.IsHighSurrogate(text[index]) && index + 1 < text.Length && char.IsLowSurrogate(text[index + 1])
-                    ? 2
-                    : 1;
-
-            if (CharUnicodeInfo.GetUnicodeCategory(text, index) != UnicodeCategory.Format)
+            if (char.GetUnicodeCategory(character) != UnicodeCategory.Format)
             {
-                _ = builder.Append(text, index, length);
+                _ = builder.Append(character);
             }
-
-            index += length;
         }
 
         return builder.ToString();

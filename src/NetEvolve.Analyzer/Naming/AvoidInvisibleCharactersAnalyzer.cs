@@ -107,9 +107,10 @@ public sealed class AvoidInvisibleCharactersAnalyzer : DiagnosticAnalyzer
 
         foreach (var trivia in root.DescendantTrivia(descendIntoTrivia: true))
         {
-            // Only plain whitespace/newline trivia is inspected; comments, directives, and string/char
-            // literal token text are free-form content where these characters may legitimately appear.
-            if (!trivia.IsKind(SyntaxKind.WhitespaceTrivia) && !trivia.IsKind(SyntaxKind.EndOfLineTrivia))
+            // Only plain whitespace trivia is inspected — comments, directives, and string/char literal
+            // token text are free-form content where these characters may legitimately appear, and newline
+            // trivia is exactly the line-break sequence, which never contains a "Format" character.
+            if (!trivia.IsKind(SyntaxKind.WhitespaceTrivia))
             {
                 continue;
             }

@@ -124,6 +124,192 @@ public sealed class AvoidInvisibleCharactersCodeFixTests
         );
 
     [Test]
+    public Task DelegateName_RenamesDeclaration() =>
+        CSharpCodeFixVerifier<
+            AvoidInvisibleCharactersAnalyzer,
+            AvoidInvisibleCharactersCodeFixProvider
+        >.VerifyCodeFixAsync(
+            $$"""
+            public delegate void {|NE0014:My{{ZeroWidthSpace}}Delegate|}();
+            """,
+            """
+            public delegate void MyDelegate();
+            """
+        );
+
+    [Test]
+    public Task LocalFunctionName_RenamesDeclarationAndCallSite() =>
+        CSharpCodeFixVerifier<
+            AvoidInvisibleCharactersAnalyzer,
+            AvoidInvisibleCharactersCodeFixProvider
+        >.VerifyCodeFixAsync(
+            $$"""
+            public sealed class Sample
+            {
+                public void DoWork()
+                {
+                    void {|NE0014:Do{{ZeroWidthSpace}}Local|}() { }
+
+                    Do{{ZeroWidthSpace}}Local();
+                }
+            }
+            """,
+            """
+            public sealed class Sample
+            {
+                public void DoWork()
+                {
+                    void DoLocal() { }
+
+                    DoLocal();
+                }
+            }
+            """
+        );
+
+    [Test]
+    public Task EventName_RenamesDeclaration() =>
+        CSharpCodeFixVerifier<
+            AvoidInvisibleCharactersAnalyzer,
+            AvoidInvisibleCharactersCodeFixProvider
+        >.VerifyCodeFixAsync(
+            $$"""
+            using System;
+
+            public sealed class Sample
+            {
+                public event EventHandler? {|NE0014:My{{ZeroWidthSpace}}Event|}
+                {
+                    add { }
+                    remove { }
+                }
+            }
+            """,
+            """
+            using System;
+
+            public sealed class Sample
+            {
+                public event EventHandler? MyEvent
+                {
+                    add { }
+                    remove { }
+                }
+            }
+            """
+        );
+
+    [Test]
+    public Task CatchVariableName_RenamesDeclarationAndUsage() =>
+        CSharpCodeFixVerifier<
+            AvoidInvisibleCharactersAnalyzer,
+            AvoidInvisibleCharactersCodeFixProvider
+        >.VerifyCodeFixAsync(
+            $$"""
+            using System;
+
+            public sealed class Sample
+            {
+                public void DoWork()
+                {
+                    try
+                    {
+                    }
+                    catch (Exception {|NE0014:e{{ZeroWidthSpace}}x|})
+                    {
+                        _ = ex;
+                    }
+                }
+            }
+            """,
+            """
+            using System;
+
+            public sealed class Sample
+            {
+                public void DoWork()
+                {
+                    try
+                    {
+                    }
+                    catch (Exception ex)
+                    {
+                        _ = ex;
+                    }
+                }
+            }
+            """
+        );
+
+    [Test]
+    public Task PatternVariableName_RenamesDeclarationAndUsage() =>
+        CSharpCodeFixVerifier<
+            AvoidInvisibleCharactersAnalyzer,
+            AvoidInvisibleCharactersCodeFixProvider
+        >.VerifyCodeFixAsync(
+            $$"""
+            public sealed class Sample
+            {
+                public void DoWork(object value)
+                {
+                    if (value is int {|NE0014:nu{{ZeroWidthSpace}}mber|})
+                    {
+                        _ = number;
+                    }
+                }
+            }
+            """,
+            """
+            public sealed class Sample
+            {
+                public void DoWork(object value)
+                {
+                    if (value is int number)
+                    {
+                        _ = number;
+                    }
+                }
+            }
+            """
+        );
+
+    [Test]
+    public Task ForEachVariableName_RenamesDeclarationAndUsage() =>
+        CSharpCodeFixVerifier<
+            AvoidInvisibleCharactersAnalyzer,
+            AvoidInvisibleCharactersCodeFixProvider
+        >.VerifyCodeFixAsync(
+            $$"""
+            using System.Collections.Generic;
+
+            public sealed class Sample
+            {
+                public void DoWork(IEnumerable<int> items)
+                {
+                    foreach (var {|NE0014:i{{ZeroWidthSpace}}tem|} in items)
+                    {
+                        _ = item;
+                    }
+                }
+            }
+            """,
+            """
+            using System.Collections.Generic;
+
+            public sealed class Sample
+            {
+                public void DoWork(IEnumerable<int> items)
+                {
+                    foreach (var item in items)
+                    {
+                        _ = item;
+                    }
+                }
+            }
+            """
+        );
+
+    [Test]
     public Task NamespaceSegment_RenamesDeclaration() =>
         CSharpCodeFixVerifier<
             AvoidInvisibleCharactersAnalyzer,

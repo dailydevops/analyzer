@@ -44,8 +44,10 @@ public sealed class AvoidInvisibleCharactersCodeFixProvider : CodeFixProvider
         var root = (await context.Document.GetSyntaxRootAsync(context.CancellationToken).ConfigureAwait(false))!;
         var start = diagnostic.Location.SourceSpan.Start;
 
+        // Newline trivia is exactly the line-break sequence, which never contains a "Format" character —
+        // see AvoidInvisibleCharactersAnalyzer.AnalyzeTrivia — so only whitespace trivia is checked here.
         var trivia = root.FindTrivia(start, findInsideTrivia: true);
-        if (trivia.IsKind(SyntaxKind.WhitespaceTrivia) || trivia.IsKind(SyntaxKind.EndOfLineTrivia))
+        if (trivia.IsKind(SyntaxKind.WhitespaceTrivia))
         {
             RegisterTextEditFix(context, diagnostic, trivia.Span);
             return;
