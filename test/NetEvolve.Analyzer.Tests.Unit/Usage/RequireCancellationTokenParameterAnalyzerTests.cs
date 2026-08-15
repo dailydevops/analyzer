@@ -362,8 +362,35 @@ public sealed class RequireCancellationTokenParameterAnalyzerTests
             """
         );
 
+    // ---- Positive: a local function that itself still needs a token (because ITS body has an appendable call)
+    // ---- is reason enough to flag the enclosing method, since the code fix can extend both -------------------
+
     [Test]
-    public Task AppendableCallOnlyInsideLocalFunction_NoDiagnostic() =>
+    public Task AppendableCallOnlyInsideLocalFunctionNeedingItsOwnToken_Reports() =>
+        CSharpAnalyzerVerifier<RequireCancellationTokenParameterAnalyzer>.VerifyAnalyzerAsync(
+            """
+            using System.Threading;
+            using System.Threading.Tasks;
+
+            public sealed class Sample
+            {
+                public Task {|NE0010:Run|}()
+                {
+                    return Local();
+
+                    Task Local() => LoadAsync();
+                }
+
+                private static Task LoadAsync(CancellationToken cancellationToken = default) => Task.CompletedTask;
+            }
+            """
+        );
+
+    // ---- Negative: a local function that already declares its own CancellationToken parameter needs no
+    // ---- further help, so it isn't a reason to flag the enclosing method on its own -------------------------
+
+    [Test]
+    public Task LocalFunctionAlreadyHasOwnCancellationToken_NoDiagnostic() =>
         CSharpAnalyzerVerifier<RequireCancellationTokenParameterAnalyzer>.VerifyAnalyzerAsync(
             """
             using System.Threading;
@@ -373,9 +400,34 @@ public sealed class RequireCancellationTokenParameterAnalyzerTests
             {
                 public Task Run()
                 {
-                    return Local();
+                    return Local(default);
 
-                    Task Local() => LoadAsync();
+                    static Task Local(CancellationToken token) => LoadAsync(token);
+                }
+
+                private static Task LoadAsync(CancellationToken cancellationToken) => Task.CompletedTask;
+            }
+            """
+        );
+
+    // ---- Negative: a local function whose return type NE0010 doesn't cover isn't a reason to flag the
+    // ---- enclosing method either ------------------------------------------------------------------------------
+
+    [Test]
+    public Task LocalFunctionReturnsUnsupportedType_NoDiagnostic() =>
+        CSharpAnalyzerVerifier<RequireCancellationTokenParameterAnalyzer>.VerifyAnalyzerAsync(
+            """
+            using System.Threading;
+            using System.Threading.Tasks;
+
+            public sealed class Sample
+            {
+                public Task Run()
+                {
+                    Local();
+                    return Task.CompletedTask;
+
+                    void Local() => LoadAsync();
                 }
 
                 private static Task LoadAsync(CancellationToken cancellationToken = default) => Task.CompletedTask;
