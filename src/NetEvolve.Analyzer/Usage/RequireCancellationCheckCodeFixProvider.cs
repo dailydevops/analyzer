@@ -41,7 +41,7 @@ public sealed class RequireCancellationCheckCodeFixProvider : CodeFixProvider
     {
         var root = (await context.Document.GetSyntaxRootAsync(context.CancellationToken).ConfigureAwait(false))!;
         var diagnostic = context.Diagnostics[0];
-        var declaration = root.FindNode(diagnostic.Location.SourceSpan).AncestorsAndSelf().First(IsMemberDeclaration);
+        var declaration = FindMemberDeclaration(root.FindNode(diagnostic.Location.SourceSpan));
 
         var tokenName = GetCancellationTokenParameterName(GetDeclarationParts(declaration).ParameterList);
         if (tokenName is null)
@@ -82,15 +82,16 @@ public sealed class RequireCancellationCheckCodeFixProvider : CodeFixProvider
         );
     }
 
-    // A method or a local function — the only two shapes NE0009 reports on. Neither shares a common Roslyn
-    // base type exposing Body/ParameterList/ReturnType/Modifiers, so the accessors below dispatch on both.
-    private static bool IsMemberDeclaration(SyntaxNode node) =>
-        node is MethodDeclarationSyntax or LocalFunctionStatementSyntax;
+    // The nearest method or local function at or above 'node' — the only two shapes NE0009 reports on. A
+    // single walk checking both types per candidate: a local function nested inside a method must match
+    // itself first, before its enclosing method further up the same walk.
+    private static SyntaxNode FindMemberDeclaration(SyntaxNode node) =>
+        node.AncestorsAndSelf()
+            .First(candidate => candidate is MethodDeclarationSyntax or LocalFunctionStatementSyntax);
 
     // Pulls the four members shared by a method and a local function out of whichever shape 'declaration' is.
-    // Every caller passes a node matched by IsMemberDeclaration (either the analyzer-reported one, or one
-    // re-found via .First(IsMemberDeclaration)), so it is always one of these two shapes — no fallback branch
-    // to leave uncovered.
+    // Every caller passes a node found by FindMemberDeclaration, so it is always one of these two shapes — no
+    // fallback branch to leave uncovered.
     private static (
         BlockSyntax? Body,
         ParameterListSyntax ParameterList,
@@ -118,7 +119,7 @@ public sealed class RequireCancellationCheckCodeFixProvider : CodeFixProvider
         cancellationToken.ThrowIfCancellationRequested();
 
         var root = (await document.GetSyntaxRootAsync(cancellationToken).ConfigureAwait(false))!;
-        var current = root.FindNode(declaration.Span).AncestorsAndSelf().First(IsMemberDeclaration);
+        var current = FindMemberDeclaration(root.FindNode(declaration.Span));
 
         var body = GetDeclarationParts(current).Body!;
         var statements = body.Statements;

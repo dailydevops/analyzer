@@ -228,6 +228,81 @@ public sealed class RequireCancellationCheckCodeFixTests
         );
 
     [Test]
+    public Task AsyncValueTaskMethod_AddsIsCancellationRequestedWithBareReturn() =>
+        RequireCancellationCheckCodeFixVerifier<
+            RequireCancellationCheckAnalyzer,
+            RequireCancellationCheckCodeFixProvider
+        >.VerifyCodeFixAsync(
+            """
+            using System.Threading;
+            using System.Threading.Tasks;
+
+            public sealed class Sample
+            {
+                public async ValueTask {|NE0009:RunAsync|}(CancellationToken cancellationToken)
+                {
+                    await DoWorkAsync().ConfigureAwait(false);
+                }
+
+                private static ValueTask DoWorkAsync() => ValueTask.CompletedTask;
+            }
+            """,
+            """
+            using System.Threading;
+            using System.Threading.Tasks;
+
+            public sealed class Sample
+            {
+                public async ValueTask RunAsync(CancellationToken cancellationToken)
+                {
+                    if (cancellationToken.IsCancellationRequested)
+                    {
+                        return;
+                    }
+
+                    await DoWorkAsync().ConfigureAwait(false);
+                }
+
+                private static ValueTask DoWorkAsync() => ValueTask.CompletedTask;
+            }
+            """,
+            IsCancellationRequestedKey
+        );
+
+    [Test]
+    public Task FullyQualifiedCancellationTokenParameter_AddsThrowIfCancellationRequested() =>
+        RequireCancellationCheckCodeFixVerifier<
+            RequireCancellationCheckAnalyzer,
+            RequireCancellationCheckCodeFixProvider
+        >.VerifyCodeFixAsync(
+            """
+            public sealed class Sample
+            {
+                public void {|NE0009:Run|}(System.Threading.CancellationToken cancellationToken)
+                {
+                    DoWork();
+                }
+
+                private static void DoWork() { }
+            }
+            """,
+            """
+            public sealed class Sample
+            {
+                public void Run(System.Threading.CancellationToken cancellationToken)
+                {
+                    cancellationToken.ThrowIfCancellationRequested();
+
+                    DoWork();
+                }
+
+                private static void DoWork() { }
+            }
+            """,
+            ThrowIfCancellationRequestedKey
+        );
+
+    [Test]
     public Task MethodWithReturnValue_AddsIsCancellationRequestedWithReturnDefault() =>
         RequireCancellationCheckCodeFixVerifier<
             RequireCancellationCheckAnalyzer,
