@@ -131,13 +131,13 @@
     <value>A &lt;c&gt; or &lt;code&gt; element whose entire content is a single native type name (e.g. 'string', 'int') carries no semantic meaning; &lt;see cref="..."/&gt; is the dedicated construct for referencing a type and is what IntelliSense and documentation generators recognize as such.</value>
   </data>
   <data name="NE0009_Title" xml:space="preserve">
-    <value>Check for cancellation at the start of the method body</value>
+    <value>Check for cancellation at the start of the method or local function body</value>
   </data>
   <data name="NE0009_MessageFormat" xml:space="preserve">
-    <value>Method '{0}' has a CancellationToken parameter but does not check for cancellation at the start of its body</value>
+    <value>Method or local function '{0}' has a CancellationToken parameter but does not check for cancellation at the start of its body</value>
   </data>
   <data name="NE0009_Description" xml:space="preserve">
-    <value>A method accepting a CancellationToken should honor it as early as possible. As the first statement after any leading guard clauses, call 'token.ThrowIfCancellationRequested()' or check 'token.IsCancellationRequested' and return, so cancellation is observed before any other work runs.</value>
+    <value>A method or local function accepting a CancellationToken should honor it as early as possible. As the first statement after any leading guard clauses, call 'token.ThrowIfCancellationRequested()' or check 'token.IsCancellationRequested' and return, so cancellation is observed before any other work runs.</value>
   </data>
   <data name="NE0010_Title" xml:space="preserve">
     <value>Accept a CancellationToken parameter on an asynchronous method</value>

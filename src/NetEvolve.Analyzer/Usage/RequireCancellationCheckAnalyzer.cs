@@ -9,18 +9,17 @@ using Microsoft.CodeAnalysis.CSharp.Syntax;
 using Microsoft.CodeAnalysis.Diagnostics;
 
 /// <summary>
-/// NE0009 — reports a method with a block body that accepts a <see cref="System.Threading.CancellationToken"/>
-/// parameter but does not check for cancellation as the first statement of its body (immediately after any
-/// leading guard clauses). Either <c>token.ThrowIfCancellationRequested()</c> or
-/// <c>if (token.IsCancellationRequested) { return ...; }</c> (or, inside an iterator method,
-/// <c>if (token.IsCancellationRequested) { yield break; }</c>) satisfies the rule. If that first statement is
-/// itself a <see langword="for"/>/<see langword="foreach"/>/<see langword="while"/>/<see langword="do"/> loop,
-/// the same check is accepted as the first statement of the loop's body instead, and so on through any further
-/// nesting — a loop-of-loops is satisfied as soon as one nesting level's leading statement is the check.
-/// Expression-bodied methods are skipped, since they cannot structurally hold a
-/// guard statement; methods without a body (interface members, abstract, extern, or partial declarations
-/// without an implementation) are skipped as well, since there is no body to check. Only
-/// <see cref="MethodDeclarationSyntax"/> is inspected; local functions are not.
+/// NE0009 — reports a method or local function with a block body that accepts a
+/// <see cref="System.Threading.CancellationToken"/> parameter but does not check for cancellation as the first
+/// statement of its body (immediately after any leading guard clauses). Either
+/// <c>token.ThrowIfCancellationRequested()</c> or <c>if (token.IsCancellationRequested) { return ...; }</c> (or,
+/// inside an iterator, <c>if (token.IsCancellationRequested) { yield break; }</c>) satisfies the rule. If that
+/// first statement is itself a <see langword="for"/>/<see langword="foreach"/>/<see langword="while"/>/
+/// <see langword="do"/> loop, the same check is accepted as the first statement of the loop's body instead, and
+/// so on through any further nesting — a loop-of-loops is satisfied as soon as one nesting level's leading
+/// statement is the check. Expression-bodied members are skipped, since they cannot structurally hold a guard
+/// statement; members without a body (interface members, abstract, extern, or partial declarations without an
+/// implementation) are skipped as well, since there is no body to check.
 /// </summary>
 [DiagnosticAnalyzer(LanguageNames.CSharp)]
 public sealed class RequireCancellationCheckAnalyzer : DiagnosticAnalyzer
@@ -40,6 +39,7 @@ public sealed class RequireCancellationCheckAnalyzer : DiagnosticAnalyzer
         context.EnableConcurrentExecution();
         context.ConfigureGeneratedCodeAnalysis(GeneratedCodeAnalysisFlags.None);
         context.RegisterSyntaxNodeAction(AnalyzeMethod, SyntaxKind.MethodDeclaration);
+        context.RegisterSyntaxNodeAction(AnalyzeLocalFunction, SyntaxKind.LocalFunctionStatement);
     }
 
     private static void AnalyzeMethod(SyntaxNodeAnalysisContext context)
@@ -54,13 +54,36 @@ public sealed class RequireCancellationCheckAnalyzer : DiagnosticAnalyzer
             return;
         }
 
-        var tokenNames = GetCancellationTokenParameterNames(context.SemanticModel, method);
+        Analyze(context, method.Body, method.ParameterList, method.Identifier);
+    }
+
+    private static void AnalyzeLocalFunction(SyntaxNodeAnalysisContext context)
+    {
+        var localFunction = (LocalFunctionStatementSyntax)context.Node;
+
+        // Same reasoning as AnalyzeMethod: expression-bodied or bodyless local functions have nothing to check.
+        if (localFunction.Body is null)
+        {
+            return;
+        }
+
+        Analyze(context, localFunction.Body, localFunction.ParameterList, localFunction.Identifier);
+    }
+
+    private static void Analyze(
+        SyntaxNodeAnalysisContext context,
+        BlockSyntax body,
+        ParameterListSyntax parameterList,
+        SyntaxToken identifier
+    )
+    {
+        var tokenNames = GetCancellationTokenParameterNames(context.SemanticModel, parameterList);
         if (tokenNames.IsEmpty)
         {
             return;
         }
 
-        if (HasLeadingCancellationCheck(context.SemanticModel, method.Body.Statements, tokenNames))
+        if (HasLeadingCancellationCheck(context.SemanticModel, body.Statements, tokenNames))
         {
             return;
         }
@@ -68,21 +91,21 @@ public sealed class RequireCancellationCheckAnalyzer : DiagnosticAnalyzer
         context.ReportDiagnostic(
             Diagnostic.Create(
                 DiagnosticDescriptors.RequireCancellationCheck,
-                method.Identifier.GetLocation(),
-                method.Identifier.ValueText
+                identifier.GetLocation(),
+                identifier.ValueText
             )
         );
     }
 
-    /// <summary>The names of the method's parameters typed as <c>System.Threading.CancellationToken</c>.</summary>
+    /// <summary>The names of the parameters typed as <c>System.Threading.CancellationToken</c>.</summary>
     private static ImmutableArray<string> GetCancellationTokenParameterNames(
         SemanticModel semanticModel,
-        MethodDeclarationSyntax method
+        ParameterListSyntax parameterList
     )
     {
         var builder = ImmutableArray.CreateBuilder<string>();
 
-        foreach (var parameter in method.ParameterList.Parameters)
+        foreach (var parameter in parameterList.Parameters)
         {
             if (parameter.Type is null)
             {

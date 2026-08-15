@@ -234,4 +234,62 @@ public sealed class RequireCancellationCheckAnalyzerTests
 
         await Assert.That(diagnostics.Any(IsNe0009)).IsFalse();
     }
+
+    [Test]
+    public async Task LocalFunctionMissingCheck_ReportsNe0009()
+    {
+        const string source = """
+            using System.Threading;
+            using System.Threading.Tasks;
+
+            public sealed class Sample
+            {
+                public Task RunAsync()
+                {
+                    return TestMethod(default);
+
+                    static Task TestMethod(CancellationToken cancellationToken)
+                    {
+                        return Task.Delay(1000);
+                    }
+                }
+            }
+            """;
+
+        var diagnostics = await AnalyzerCompiler
+            .GetAnalyzerDiagnosticsAsync(source, new RequireCancellationCheckAnalyzer())
+            .ConfigureAwait(false);
+
+        await Assert.That(diagnostics.Count(IsNe0009)).IsEqualTo(1);
+    }
+
+    [Test]
+    public async Task LocalFunctionThrowIfCancellationRequestedFirst_ReportsNothing()
+    {
+        const string source = """
+            using System.Threading;
+            using System.Threading.Tasks;
+
+            public sealed class Sample
+            {
+                public Task RunAsync()
+                {
+                    return TestMethod(default);
+
+                    static Task TestMethod(CancellationToken cancellationToken)
+                    {
+                        cancellationToken.ThrowIfCancellationRequested();
+
+                        return Task.Delay(1000);
+                    }
+                }
+            }
+            """;
+
+        var diagnostics = await AnalyzerCompiler
+            .GetAnalyzerDiagnosticsAsync(source, new RequireCancellationCheckAnalyzer())
+            .ConfigureAwait(false);
+
+        await Assert.That(diagnostics.Any(IsNe0009)).IsFalse();
+    }
 }

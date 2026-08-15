@@ -14,8 +14,9 @@ using Microsoft.CodeAnalysis.CSharp.Syntax;
 using NetEvolve.Analyzer.Helpers;
 
 /// <summary>
-/// Code fix for <see cref="RequireCancellationCheckAnalyzer">NE0009</see>. Offers two independent fixes at the
-/// position immediately after the method's leading guard clauses: inserting
+/// Code fix for <see cref="RequireCancellationCheckAnalyzer">NE0009</see>. Applies equally to a method or a
+/// local function. Offers two independent fixes at the position immediately after the leading guard clauses:
+/// inserting
 /// <c>token.ThrowIfCancellationRequested();</c>, or inserting
 /// <c>if (token.IsCancellationRequested) { return ...; }</c>. Both are always registered, so the user (or Fix
 /// All) can choose either form for a given occurrence. The inserted text is built directly (rather than via
@@ -40,12 +41,9 @@ public sealed class RequireCancellationCheckCodeFixProvider : CodeFixProvider
     {
         var root = (await context.Document.GetSyntaxRootAsync(context.CancellationToken).ConfigureAwait(false))!;
         var diagnostic = context.Diagnostics[0];
-        var method = root.FindNode(diagnostic.Location.SourceSpan)
-            .AncestorsAndSelf()
-            .OfType<MethodDeclarationSyntax>()
-            .First();
+        var declaration = FindMemberDeclaration(root.FindNode(diagnostic.Location.SourceSpan));
 
-        var tokenName = GetCancellationTokenParameterName(method);
+        var tokenName = GetCancellationTokenParameterName(GetDeclarationParts(declaration).ParameterList);
         if (tokenName is null)
         {
             return;
@@ -57,7 +55,7 @@ public sealed class RequireCancellationCheckCodeFixProvider : CodeFixProvider
                 cancellationToken =>
                     InsertCheckAsync(
                         context.Document,
-                        method,
+                        declaration,
                         tokenName,
                         BuildThrowIfCancellationRequestedTextAsync,
                         cancellationToken
@@ -73,7 +71,7 @@ public sealed class RequireCancellationCheckCodeFixProvider : CodeFixProvider
                 cancellationToken =>
                     InsertCheckAsync(
                         context.Document,
-                        method,
+                        declaration,
                         tokenName,
                         BuildIsCancellationRequestedTextAsync,
                         cancellationToken
@@ -84,20 +82,46 @@ public sealed class RequireCancellationCheckCodeFixProvider : CodeFixProvider
         );
     }
 
+    // The nearest method or local function at or above 'node' — the only two shapes NE0009 reports on. A
+    // single walk checking both types per candidate: a local function nested inside a method must match
+    // itself first, before its enclosing method further up the same walk.
+    private static SyntaxNode FindMemberDeclaration(SyntaxNode node) =>
+        node.AncestorsAndSelf()
+            .First(candidate => candidate is MethodDeclarationSyntax or LocalFunctionStatementSyntax);
+
+    // Pulls the four members shared by a method and a local function out of whichever shape 'declaration' is.
+    // Every caller passes a node found by FindMemberDeclaration, so it is always one of these two shapes — no
+    // fallback branch to leave uncovered.
+    private static (
+        BlockSyntax? Body,
+        ParameterListSyntax ParameterList,
+        TypeSyntax ReturnType,
+        SyntaxTokenList Modifiers
+    ) GetDeclarationParts(SyntaxNode declaration)
+    {
+        if (declaration is MethodDeclarationSyntax method)
+        {
+            return (method.Body, method.ParameterList, method.ReturnType, method.Modifiers);
+        }
+
+        var localFunction = (LocalFunctionStatementSyntax)declaration;
+        return (localFunction.Body, localFunction.ParameterList, localFunction.ReturnType, localFunction.Modifiers);
+    }
+
     private static async Task<Document> InsertCheckAsync(
         Document document,
-        MethodDeclarationSyntax method,
+        SyntaxNode declaration,
         string tokenName,
-        Func<Document, MethodDeclarationSyntax, string, string, CancellationToken, Task<string>> buildStatementText,
+        Func<Document, SyntaxNode, string, string, CancellationToken, Task<string>> buildStatementText,
         CancellationToken cancellationToken
     )
     {
         cancellationToken.ThrowIfCancellationRequested();
 
         var root = (await document.GetSyntaxRootAsync(cancellationToken).ConfigureAwait(false))!;
-        var current = root.FindNode(method.Span).AncestorsAndSelf().OfType<MethodDeclarationSyntax>().First();
+        var current = FindMemberDeclaration(root.FindNode(declaration.Span));
 
-        var body = current.Body!;
+        var body = GetDeclarationParts(current).Body!;
         var statements = body.Statements;
         var guardCount = CountLeadingGuardClauses(statements);
         var indentation = GetIndentation(current, statements, guardCount);
@@ -147,9 +171,9 @@ public sealed class RequireCancellationCheckCodeFixProvider : CodeFixProvider
 
     // The indentation (as plain whitespace text) that the inserted statement should use: that of the statement
     // it will be inserted before, or of the last statement if inserted at the end, or one level deeper than
-    // the method itself if the body is empty.
+    // the declaration itself if the body is empty.
     private static string GetIndentation(
-        MethodDeclarationSyntax method,
+        SyntaxNode declaration,
         SyntaxList<StatementSyntax> statements,
         int insertionIndex
     )
@@ -164,7 +188,7 @@ public sealed class RequireCancellationCheckCodeFixProvider : CodeFixProvider
             return GetTrailingIndentation(statements[statements.Count - 1].GetLeadingTrivia());
         }
 
-        return GetTrailingIndentation(method.GetLeadingTrivia()) + "    ";
+        return GetTrailingIndentation(declaration.GetLeadingTrivia()) + "    ";
     }
 
     // A statement's (or the method's) leading trivia isn't just its indentation: it's everything back to the
@@ -244,9 +268,9 @@ public sealed class RequireCancellationCheckCodeFixProvider : CodeFixProvider
         return false;
     }
 
-    private static string? GetCancellationTokenParameterName(MethodDeclarationSyntax method) =>
-        method
-            .ParameterList.Parameters.FirstOrDefault(parameter =>
+    private static string? GetCancellationTokenParameterName(ParameterListSyntax parameterList) =>
+        parameterList
+            .Parameters.FirstOrDefault(parameter =>
                 parameter.Type
                     is IdentifierNameSyntax { Identifier.ValueText: "CancellationToken" }
                         or QualifiedNameSyntax { Right.Identifier.ValueText: "CancellationToken" }
@@ -255,7 +279,7 @@ public sealed class RequireCancellationCheckCodeFixProvider : CodeFixProvider
 
     private static Task<string> BuildThrowIfCancellationRequestedTextAsync(
         Document _,
-        MethodDeclarationSyntax _1,
+        SyntaxNode _1,
         string tokenName,
         string _2,
         CancellationToken _3
@@ -263,7 +287,7 @@ public sealed class RequireCancellationCheckCodeFixProvider : CodeFixProvider
 
     private static async Task<string> BuildIsCancellationRequestedTextAsync(
         Document document,
-        MethodDeclarationSyntax method,
+        SyntaxNode declaration,
         string tokenName,
         string indentation,
         CancellationToken cancellationToken
@@ -271,7 +295,8 @@ public sealed class RequireCancellationCheckCodeFixProvider : CodeFixProvider
     {
         cancellationToken.ThrowIfCancellationRequested();
 
-        var returnText = await GetReturnStatementTextAsync(document, method, cancellationToken).ConfigureAwait(false);
+        var returnText = await GetReturnStatementTextAsync(document, declaration, cancellationToken)
+            .ConfigureAwait(false);
         return $"if ({tokenName}.IsCancellationRequested)\n{indentation}{{\n{indentation}    {returnText}\n{indentation}}}\n";
     }
 
@@ -317,24 +342,26 @@ public sealed class RequireCancellationCheckCodeFixProvider : CodeFixProvider
     // universal fallback — always syntactically legal, even where it is only a semantic placeholder.
     private static async Task<string> GetReturnStatementTextAsync(
         Document document,
-        MethodDeclarationSyntax method,
+        SyntaxNode declaration,
         CancellationToken cancellationToken
     )
     {
         cancellationToken.ThrowIfCancellationRequested();
 
-        if (IsIteratorMethod(method))
+        var (body, _, returnType, modifiers) = GetDeclarationParts(declaration);
+
+        if (IsIteratorMethod(body!))
         {
             return "yield break;";
         }
 
-        if (method.ReturnType is PredefinedTypeSyntax { Keyword.RawKind: (int)SyntaxKind.VoidKeyword })
+        if (returnType is PredefinedTypeSyntax { Keyword.RawKind: (int)SyntaxKind.VoidKeyword })
         {
             return "return;";
         }
 
-        var isAsync = method.Modifiers.Any(SyntaxKind.AsyncKeyword);
-        if (isAsync && method.ReturnType is IdentifierNameSyntax { Identifier.ValueText: "Task" or "ValueTask" })
+        var isAsync = modifiers.Any(SyntaxKind.AsyncKeyword);
+        if (isAsync && returnType is IdentifierNameSyntax { Identifier.ValueText: "Task" or "ValueTask" })
         {
             return "return;";
         }
@@ -345,7 +372,7 @@ public sealed class RequireCancellationCheckCodeFixProvider : CodeFixProvider
         if (LanguageVersionGate.Supports(document, (LanguageVersion)1200))
         {
             var semanticModel = await document.GetSemanticModelAsync(cancellationToken).ConfigureAwait(false);
-            var methodSymbol = semanticModel?.GetDeclaredSymbol(method, cancellationToken);
+            var methodSymbol = semanticModel?.GetDeclaredSymbol(declaration, cancellationToken) as IMethodSymbol;
 
             if (
                 methodSymbol is not null
@@ -386,14 +413,11 @@ public sealed class RequireCancellationCheckCodeFixProvider : CodeFixProvider
             _ => false,
         };
 
-    // Whether 'method' is (or contains, at its own nesting level) an iterator — i.e. already uses 'yield
+    // Whether 'body' is (or contains, at its own nesting level) an iterator — i.e. already uses 'yield
     // return'/'yield break' somewhere in its body. Descent stops at a nested local function, since a local
-    // function's own 'yield' makes only that local function an iterator, not the enclosing method.
-    // The code fix only ever runs against a diagnostic the analyzer reported, and the analyzer only reports on
-    // methods with a block body — Body is never null here.
-    private static bool IsIteratorMethod(MethodDeclarationSyntax method) =>
-        method
-            .Body!.DescendantNodes(descendIntoChildren: node => node is not LocalFunctionStatementSyntax)
+    // function's own 'yield' makes only that local function an iterator, not the enclosing member.
+    private static bool IsIteratorMethod(BlockSyntax body) =>
+        body.DescendantNodes(descendIntoChildren: node => node is not LocalFunctionStatementSyntax)
             .OfType<YieldStatementSyntax>()
             .Any();
 }

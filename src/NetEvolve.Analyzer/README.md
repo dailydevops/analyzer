@@ -129,7 +129,7 @@ description, fix guidance, and configuration options.
 | [NE0006](https://github.com/dailydevops/analyzer/blob/main/docs/rules/usage/ne0006.md) | Usage | Use the `is not null` pattern instead of `is object` | Yes |
 | [NE0007](https://github.com/dailydevops/analyzer/blob/main/docs/rules/documentation/ne0007.md) | Documentation | Use `<see langword="..."/>` instead of `<c>...</c>` or `<code>...</code>` for C# keywords | Yes |
 | [NE0008](https://github.com/dailydevops/analyzer/blob/main/docs/rules/documentation/ne0008.md) | Documentation | Use `<see cref="..."/>` instead of `<c>...</c>` or `<code>...</code>` for native type names | Yes |
-| [NE0009](https://github.com/dailydevops/analyzer/blob/main/docs/rules/usage/ne0009.md) | Usage | Check for cancellation at the start of a method with a CancellationToken parameter | Yes |
+| [NE0009](https://github.com/dailydevops/analyzer/blob/main/docs/rules/usage/ne0009.md) | Usage | Check for cancellation at the start of a method or local function with a CancellationToken parameter | Yes |
 | [NE0010](https://github.com/dailydevops/analyzer/blob/main/docs/rules/usage/ne0010.md) | Usage | Accept a CancellationToken parameter on a Task/ValueTask/IAsyncEnumerable-returning method | Yes |
 | [NE0011](https://github.com/dailydevops/analyzer/blob/main/docs/rules/style/ne0011.md) | Style | Avoid `#region` directives | Yes |
 | [NE0012](https://github.com/dailydevops/analyzer/blob/main/docs/rules/style/ne0012.md) | Style | Use an explicit numeric literal suffix | Yes |
