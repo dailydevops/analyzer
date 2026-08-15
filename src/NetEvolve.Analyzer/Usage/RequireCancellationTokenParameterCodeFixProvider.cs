@@ -136,10 +136,9 @@ public sealed class RequireCancellationTokenParameterCodeFixProvider : CodeFixPr
         {
             replacements[localFunction] = ExtendLocalFunctionWithCancellationToken(semanticModel, localFunction);
 
-            if (semanticModel.GetDeclaredSymbol(localFunction) is not IMethodSymbol localFunctionSymbol)
-            {
-                continue;
-            }
+            // CollectLocalFunctionsNeedingCancellationToken only yields a local function once it has already
+            // resolved its declared symbol (see NeedsCancellationTokenParameter), so this always succeeds.
+            var localFunctionSymbol = (semanticModel.GetDeclaredSymbol(localFunction) as IMethodSymbol)!;
 
             foreach (
                 var invocation in CancellationTokenCallSites.CollectTopLevelInvocationsOf(

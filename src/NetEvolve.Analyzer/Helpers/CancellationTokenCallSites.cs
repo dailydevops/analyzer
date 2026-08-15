@@ -185,7 +185,7 @@ internal static class CancellationTokenCallSites
 
     private static bool IsSupportedAsyncReturnType(ITypeSymbol returnType)
     {
-        if (returnType is not INamedTypeSymbol { ContainingNamespace: not null } namedType)
+        if (returnType is not INamedTypeSymbol namedType)
         {
             return false;
         }
