@@ -362,8 +362,11 @@ public sealed class RequireCancellationTokenParameterAnalyzerTests
             """
         );
 
+    // ---- Positive: a local function that itself still needs a token (because ITS body has an appendable call)
+    // ---- is reason enough to flag the enclosing method, since the code fix can extend both -------------------
+
     [Test]
-    public Task AppendableCallOnlyInsideLocalFunction_NoDiagnostic() =>
+    public Task AppendableCallOnlyInsideLocalFunctionNeedingItsOwnToken_Reports() =>
         CSharpAnalyzerVerifier<RequireCancellationTokenParameterAnalyzer>.VerifyAnalyzerAsync(
             """
             using System.Threading;
@@ -371,7 +374,7 @@ public sealed class RequireCancellationTokenParameterAnalyzerTests
 
             public sealed class Sample
             {
-                public Task Run()
+                public Task {|NE0010:Run|}()
                 {
                     return Local();
 

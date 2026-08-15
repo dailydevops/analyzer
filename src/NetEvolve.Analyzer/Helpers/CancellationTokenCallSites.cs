@@ -26,9 +26,16 @@ internal static class CancellationTokenCallSites
     /// still needs its own parameter. A method whose body has none of the above would end up with a parameter
     /// it can never actually use, so the analyzer uses this to skip it.
     /// </summary>
-    public static bool HasUsableCancellationToken(SemanticModel semanticModel, MethodDeclarationSyntax method)
+    public static bool HasUsableCancellationToken(SemanticModel semanticModel, MethodDeclarationSyntax method) =>
+        HasUsableCancellationToken(semanticModel, method.Body, method.ExpressionBody?.Expression);
+
+    private static bool HasUsableCancellationToken(
+        SemanticModel semanticModel,
+        BlockSyntax? body,
+        ExpressionSyntax? expressionBodyExpression
+    )
     {
-        SyntaxNode? searchRoot = method.Body is not null ? method.Body : method.ExpressionBody?.Expression;
+        SyntaxNode? searchRoot = body is not null ? body : expressionBodyExpression;
         if (searchRoot is null)
         {
             return false;
@@ -76,9 +83,26 @@ internal static class CancellationTokenCallSites
     public static List<AppendableCallSite> CollectAppendableInvocations(
         SemanticModel semanticModel,
         MethodDeclarationSyntax method
+    ) => CollectAppendableInvocations(semanticModel, method.Body, method.ExpressionBody?.Expression);
+
+    /// <summary>
+    /// The same as the <see cref="MethodDeclarationSyntax"/> overload, but for a local function — used once a
+    /// local function is itself being given a <see cref="System.Threading.CancellationToken"/> parameter (see
+    /// <see cref="CollectLocalFunctionsNeedingCancellationToken"/>), so calls within its own body can be wired
+    /// through the same way.
+    /// </summary>
+    public static List<AppendableCallSite> CollectAppendableInvocations(
+        SemanticModel semanticModel,
+        LocalFunctionStatementSyntax localFunction
+    ) => CollectAppendableInvocations(semanticModel, localFunction.Body, localFunction.ExpressionBody?.Expression);
+
+    private static List<AppendableCallSite> CollectAppendableInvocations(
+        SemanticModel semanticModel,
+        BlockSyntax? body,
+        ExpressionSyntax? expressionBodyExpression
     )
     {
-        SyntaxNode? searchRoot = method.Body is not null ? method.Body : method.ExpressionBody?.Expression;
+        SyntaxNode? searchRoot = body is not null ? body : expressionBodyExpression;
         if (searchRoot is null)
         {
             return [];
@@ -98,6 +122,105 @@ internal static class CancellationTokenCallSites
         }
 
         return callSites;
+    }
+
+    /// <summary>
+    /// Local functions declared directly in <paramref name="method"/>'s body/expression-body — not nested
+    /// inside a further lambda/anonymous method/local function — that return one of NE0010's supported async
+    /// types, declare no <see cref="System.Threading.CancellationToken"/> parameter of their own, and have some
+    /// actual use for one in their own body (see
+    /// <see cref="HasUsableCancellationToken(SemanticModel, MethodDeclarationSyntax)"/>). Unlike an arbitrary
+    /// external method, every call site of a local function is visible and rewritable in the same edit, so the
+    /// NE0010 code fix extends these too instead of leaving them untouched.
+    /// </summary>
+    public static List<LocalFunctionStatementSyntax> CollectLocalFunctionsNeedingCancellationToken(
+        SemanticModel semanticModel,
+        MethodDeclarationSyntax method
+    )
+    {
+        SyntaxNode? searchRoot = method.Body is not null ? method.Body : method.ExpressionBody?.Expression;
+        if (searchRoot is null)
+        {
+            return [];
+        }
+
+        return searchRoot
+            .DescendantNodesAndSelf(descendIntoChildren: IsNotNestedFunctionScope)
+            .OfType<LocalFunctionStatementSyntax>()
+            .Where(localFunction => NeedsCancellationTokenParameter(semanticModel, localFunction))
+            .ToList();
+    }
+
+    private static bool NeedsCancellationTokenParameter(
+        SemanticModel semanticModel,
+        LocalFunctionStatementSyntax localFunction
+    )
+    {
+        if (semanticModel.GetDeclaredSymbol(localFunction) is not IMethodSymbol symbol)
+        {
+            return false;
+        }
+
+        if (symbol.Parameters.Any(parameter => IsCancellationToken(parameter.Type)))
+        {
+            return false;
+        }
+
+        if (!IsSupportedAsyncReturnType(symbol.ReturnType))
+        {
+            return false;
+        }
+
+        return HasUsableCancellationToken(semanticModel, localFunction.Body, localFunction.ExpressionBody?.Expression);
+    }
+
+    private static readonly string[] SupportedAsyncReturnTypeMetadataNames =
+    {
+        "System.Threading.Tasks.Task",
+        "System.Threading.Tasks.Task`1",
+        "System.Threading.Tasks.ValueTask",
+        "System.Threading.Tasks.ValueTask`1",
+        "System.Collections.Generic.IAsyncEnumerable`1",
+    };
+
+    private static bool IsSupportedAsyncReturnType(ITypeSymbol returnType)
+    {
+        if (returnType is not INamedTypeSymbol { ContainingNamespace: not null } namedType)
+        {
+            return false;
+        }
+
+        var original = namedType.OriginalDefinition;
+        var fullName = $"{original.ContainingNamespace.ToDisplayString()}.{original.MetadataName}";
+        return SupportedAsyncReturnTypeMetadataNames.Contains(fullName, System.StringComparer.Ordinal);
+    }
+
+    /// <summary>
+    /// Invocations within <paramref name="method"/>'s body/expression-body — not nested inside a further
+    /// lambda/anonymous method/local function — that resolve to <paramref name="target"/>. Used to find every
+    /// call site of a local function the code fix is itself extending with a
+    /// <see cref="System.Threading.CancellationToken"/> parameter (see
+    /// <see cref="CollectLocalFunctionsNeedingCancellationToken"/>).
+    /// </summary>
+    public static List<InvocationExpressionSyntax> CollectTopLevelInvocationsOf(
+        SemanticModel semanticModel,
+        MethodDeclarationSyntax method,
+        IMethodSymbol target
+    )
+    {
+        SyntaxNode? searchRoot = method.Body is not null ? method.Body : method.ExpressionBody?.Expression;
+        if (searchRoot is null)
+        {
+            return [];
+        }
+
+        return searchRoot
+            .DescendantNodesAndSelf(descendIntoChildren: IsNotNestedFunctionScope)
+            .OfType<InvocationExpressionSyntax>()
+            .Where(invocation =>
+                SymbolEqualityComparer.Default.Equals(semanticModel.GetSymbolInfo(invocation).Symbol, target)
+            )
+            .ToList();
     }
 
     // Stops descent at a nested lambda/anonymous method/local function: a call inside one of those belongs to

@@ -1,5 +1,6 @@
 ﻿namespace NetEvolve.Analyzer.Usage;
 
+using System.Collections.Generic;
 using System.Collections.Immutable;
 using System.Composition;
 using System.Linq;
@@ -22,8 +23,11 @@ using NetEvolve.Analyzer.Helpers;
 /// already have an unfilled <c>CancellationToken</c> parameter or have exactly one sibling overload adding
 /// one. The token is always appended as a named argument (<c>cancellationToken: cancellationToken</c>) rather
 /// than positionally, so the target parameter can be reached even when other optional parameters follow it.
-/// Nested lambdas and local functions are left alone: their own cancellation handling is out of this fix's
-/// scope.
+/// A local function declared in the method's own body that still has a use for a token but none of its own is
+/// extended the same way — with a parameter named <c>token</c> instead, since a local function's parameter
+/// cannot share a name with anything already in scope in its enclosing method (CS0136) — and every call site of
+/// it found at the enclosing method's own top level is updated to pass it along; a nested lambda is left alone,
+/// since its own cancellation handling is out of this fix's scope.
 /// </summary>
 [ExportCodeFixProvider(LanguageNames.CSharp, Name = nameof(RequireCancellationTokenParameterCodeFixProvider))]
 [Shared]
@@ -31,6 +35,7 @@ public sealed class RequireCancellationTokenParameterCodeFixProvider : CodeFixPr
 {
     private const string SystemThreadingNamespace = "System.Threading";
     private const string ParameterName = "cancellationToken";
+    private const string LocalFunctionParameterName = "token";
 
     /// <inheritdoc />
     public override ImmutableArray<string> FixableDiagnosticIds { get; } = ImmutableArray.Create(DiagnosticIds.NE0010);
@@ -78,67 +83,133 @@ public sealed class RequireCancellationTokenParameterCodeFixProvider : CodeFixPr
         var semanticModel = await document.GetSemanticModelAsync(cancellationToken).ConfigureAwait(false);
         var methodWithPropagatedCalls = semanticModel is null
             ? currentMethod
-            : PropagateToCallSites(semanticModel, currentMethod);
+            : PropagateToCallSitesAndLocalFunctions(semanticModel, currentMethod);
 
-        var parameter = SyntaxFactory
-            .Parameter(SyntaxFactory.Identifier(ParameterName))
-            .WithType(SyntaxFactory.IdentifierName("CancellationToken").WithTrailingTrivia(SyntaxFactory.Space))
-            .WithDefault(
-                SyntaxFactory.EqualsValueClause(SyntaxFactory.LiteralExpression(SyntaxKind.DefaultLiteralExpression))
-            );
+        var parameter = CreateCancellationTokenParameter(ParameterName);
+        var updatedParameterList = InsertParameter(methodWithPropagatedCalls.ParameterList, parameter);
 
-        var updatedMethod = InsertParameter(methodWithPropagatedCalls, parameter);
-
-        var newRoot = root.ReplaceNode(currentMethod, updatedMethod);
+        var newRoot = root.ReplaceNode(
+            currentMethod,
+            methodWithPropagatedCalls.WithParameterList(updatedParameterList)
+        );
         newRoot = EnsureSystemThreadingUsing(newRoot);
 
         return document.WithSyntaxRoot(newRoot);
     }
 
+    private static ParameterSyntax CreateCancellationTokenParameter(string name) =>
+        SyntaxFactory
+            .Parameter(SyntaxFactory.Identifier(name))
+            .WithType(SyntaxFactory.IdentifierName("CancellationToken").WithTrailingTrivia(SyntaxFactory.Space))
+            .WithDefault(
+                SyntaxFactory.EqualsValueClause(SyntaxFactory.LiteralExpression(SyntaxKind.DefaultLiteralExpression))
+            );
+
     // Passes the new token through to call sites within the method's own body/expression-body that can accept
-    // it without changing which overload is chosen out from under the caller (see IsAppendableCall). Nested
-    // lambdas and local functions are skipped — capturing the outer parameter there would be legal, but
-    // whether it's *wanted* is a judgment call this mechanical fix doesn't make.
-    private static MethodDeclarationSyntax PropagateToCallSites(
+    // it without changing which overload is chosen out from under the caller (see IsAppendableCall), and
+    // extends any local function still needing one of its own (see
+    // CollectLocalFunctionsNeedingCancellationToken) the same way. A nested lambda is skipped — capturing the
+    // outer parameter there would be legal, but whether it's *wanted* is a judgment call this mechanical fix
+    // doesn't make.
+    private static MethodDeclarationSyntax PropagateToCallSitesAndLocalFunctions(
         SemanticModel semanticModel,
         MethodDeclarationSyntax method
     )
     {
-        var candidates = CancellationTokenCallSites.CollectAppendableInvocations(semanticModel, method);
-        if (candidates.Count == 0)
+        var replacements = new Dictionary<SyntaxNode, SyntaxNode>();
+
+        foreach (var candidate in CancellationTokenCallSites.CollectAppendableInvocations(semanticModel, method))
         {
-            return method;
+            replacements[candidate.Invocation] = AppendNamedArgument(
+                candidate.Invocation,
+                ParameterName,
+                candidate.ParameterName
+            );
         }
 
-        var argumentByInvocation = candidates.ToDictionary(
-            candidate => candidate.Invocation,
-            candidate =>
-                SyntaxFactory
-                    .Argument(SyntaxFactory.IdentifierName(ParameterName))
-                    .WithNameColon(SyntaxFactory.NameColon(candidate.ParameterName))
-        );
+        foreach (
+            var localFunction in CancellationTokenCallSites.CollectLocalFunctionsNeedingCancellationToken(
+                semanticModel,
+                method
+            )
+        )
+        {
+            replacements[localFunction] = ExtendLocalFunctionWithCancellationToken(semanticModel, localFunction);
 
-        return method.ReplaceNodes(
-            argumentByInvocation.Keys,
-            (originalInvocation, _) =>
-                originalInvocation.AddArgumentListArguments(argumentByInvocation[originalInvocation])
-        );
+            if (semanticModel.GetDeclaredSymbol(localFunction) is not IMethodSymbol localFunctionSymbol)
+            {
+                continue;
+            }
+
+            foreach (
+                var invocation in CancellationTokenCallSites.CollectTopLevelInvocationsOf(
+                    semanticModel,
+                    method,
+                    localFunctionSymbol
+                )
+            )
+            {
+                replacements[invocation] = AppendNamedArgument(invocation, ParameterName, LocalFunctionParameterName);
+            }
+        }
+
+        return replacements.Count == 0
+            ? method
+            : method.ReplaceNodes(replacements.Keys, (originalNode, _) => replacements[originalNode]);
     }
+
+    // A local function's new parameter is named "token", not "cancellationToken" — a local function can't
+    // declare a parameter sharing a name with anything already in scope in its enclosing method (CS0136), and
+    // the enclosing method either already has, or is about to gain, a "cancellationToken" of its own.
+    private static LocalFunctionStatementSyntax ExtendLocalFunctionWithCancellationToken(
+        SemanticModel semanticModel,
+        LocalFunctionStatementSyntax localFunction
+    )
+    {
+        var ownCandidates = CancellationTokenCallSites.CollectAppendableInvocations(semanticModel, localFunction);
+        var propagated =
+            ownCandidates.Count == 0
+                ? localFunction
+                : localFunction.ReplaceNodes(
+                    ownCandidates.Select(candidate => candidate.Invocation),
+                    (originalInvocation, _) =>
+                        AppendNamedArgument(
+                            originalInvocation,
+                            LocalFunctionParameterName,
+                            ownCandidates.First(candidate => candidate.Invocation == originalInvocation).ParameterName
+                        )
+                );
+
+        var parameter = CreateCancellationTokenParameter(LocalFunctionParameterName);
+        var updatedParameterList = InsertParameter(propagated.ParameterList, parameter);
+        return propagated.WithParameterList(updatedParameterList);
+    }
+
+    private static InvocationExpressionSyntax AppendNamedArgument(
+        InvocationExpressionSyntax invocation,
+        string identifierName,
+        string targetParameterName
+    ) =>
+        invocation.AddArgumentListArguments(
+            SyntaxFactory
+                .Argument(SyntaxFactory.IdentifierName(identifierName))
+                .WithNameColon(SyntaxFactory.NameColon(targetParameterName))
+        );
 
     // A params parameter must stay last in the parameter list, so the new CancellationToken parameter is
     // inserted right before it rather than appended after — appending after would produce invalid syntax.
-    private static MethodDeclarationSyntax InsertParameter(MethodDeclarationSyntax method, ParameterSyntax parameter)
+    private static ParameterListSyntax InsertParameter(ParameterListSyntax parameterList, ParameterSyntax parameter)
     {
-        var parameters = method.ParameterList.Parameters;
+        var parameters = parameterList.Parameters;
         var paramsIndex = parameters.IndexOf(p => p.Modifiers.Any(SyntaxKind.ParamsKeyword));
 
         if (paramsIndex < 0)
         {
-            return method.AddParameterListParameters(parameter);
+            return parameterList.AddParameters(parameter);
         }
 
         var updatedParameters = parameters.Insert(paramsIndex, parameter);
-        return method.WithParameterList(method.ParameterList.WithParameters(updatedParameters));
+        return parameterList.WithParameters(updatedParameters);
     }
 
     private static CompilationUnitSyntax EnsureSystemThreadingUsing(CompilationUnitSyntax root)

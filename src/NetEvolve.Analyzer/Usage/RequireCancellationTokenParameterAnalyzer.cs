@@ -136,7 +136,17 @@ public sealed class RequireCancellationTokenParameterAnalyzer : DiagnosticAnalyz
             return;
         }
 
-        if (!CancellationTokenCallSites.HasUsableCancellationToken(context.SemanticModel, declaration))
+        var hasUsableCancellationToken = CancellationTokenCallSites.HasUsableCancellationToken(
+            context.SemanticModel,
+            declaration
+        );
+        var hasLocalFunctionNeedingToken =
+            !hasUsableCancellationToken
+            && CancellationTokenCallSites
+                .CollectLocalFunctionsNeedingCancellationToken(context.SemanticModel, declaration)
+                .Count > 0;
+
+        if (!hasUsableCancellationToken && !hasLocalFunctionNeedingToken)
         {
             return;
         }

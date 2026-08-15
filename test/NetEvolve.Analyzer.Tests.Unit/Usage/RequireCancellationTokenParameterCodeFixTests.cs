@@ -309,8 +309,12 @@ public sealed class RequireCancellationTokenParameterCodeFixTests
             """
         );
 
+    // ---- A local function still needing a token of its own is extended too, using "token" rather than
+    // ---- "cancellationToken" as its parameter name to avoid clashing with the enclosing method's own (CS0136),
+    // ---- and every top-level call site of it is updated to pass the enclosing method's token along -----------
+
     [Test]
-    public Task CallInsideLocalFunction_IsLeftUnchanged() =>
+    public Task CallToLocalFunctionNeedingToken_ExtendsLocalFunctionAndCallSite() =>
         CSharpCodeFixVerifier<
             RequireCancellationTokenParameterAnalyzer,
             RequireCancellationTokenParameterCodeFixProvider
@@ -341,12 +345,98 @@ public sealed class RequireCancellationTokenParameterCodeFixTests
                 public Task Run(int value, CancellationToken cancellationToken = default)
                 {
                     HelperAsync(value, token: cancellationToken);
-                    return Local();
+                    return Local(token: cancellationToken);
 
-                    Task Local() => HelperAsync(value);
+                    Task Local(CancellationToken token = default) => HelperAsync(value, token: token);
                 }
 
                 private static Task HelperAsync(int value, CancellationToken token = default) => Task.CompletedTask;
+            }
+            """
+        );
+
+    [Test]
+    public Task LocalFunctionWithNoUsableCallSite_IsLeftUnchanged() =>
+        CSharpCodeFixVerifier<
+            RequireCancellationTokenParameterAnalyzer,
+            RequireCancellationTokenParameterCodeFixProvider
+        >.VerifyCodeFixAsync(
+            """
+            using System.Threading;
+            using System.Threading.Tasks;
+
+            public sealed class Sample
+            {
+                public Task {|NE0010:Run|}(int value)
+                {
+                    HelperAsync(value);
+                    return Local();
+
+                    Task Local() => Task.CompletedTask;
+                }
+
+                private static Task HelperAsync(int value, CancellationToken token = default) => Task.CompletedTask;
+            }
+            """,
+            """
+            using System.Threading;
+            using System.Threading.Tasks;
+
+            public sealed class Sample
+            {
+                public Task Run(int value, CancellationToken cancellationToken = default)
+                {
+                    HelperAsync(value, token: cancellationToken);
+                    return Local();
+
+                    Task Local() => Task.CompletedTask;
+                }
+
+                private static Task HelperAsync(int value, CancellationToken token = default) => Task.CompletedTask;
+            }
+            """
+        );
+
+    [Test]
+    public Task AsyncBlockBodiedLocalFunctionNeedingToken_ExtendsLocalFunctionAndCallSite() =>
+        CSharpCodeFixVerifier<
+            RequireCancellationTokenParameterAnalyzer,
+            RequireCancellationTokenParameterCodeFixProvider
+        >.VerifyCodeFixAsync(
+            """
+            using System.Threading;
+            using System.Threading.Tasks;
+
+            public sealed class Sample
+            {
+                public async Task<int> {|NE0010:Run|}()
+                {
+                    return await TestMethod();
+
+                    static async Task<int> TestMethod()
+                    {
+                        await Task.Delay(1000, CancellationToken.None);
+                        return 1;
+                    }
+                }
+            }
+            """,
+            """
+            using System.Threading;
+            using System.Threading.Tasks;
+
+            public sealed class Sample
+            {
+                public async Task<int> Run(CancellationToken cancellationToken = default)
+                {
+                    return await TestMethod(token: cancellationToken);
+
+                    static async Task<int> TestMethod(CancellationToken token = default)
+                    {
+                        await Task.Delay(1000, CancellationToken.None);
+                        return 1;
+                    }
+                }
             }
             """
         );
