@@ -60,8 +60,8 @@ internal static class DiagnosticDescriptors
     );
 
     /// <summary>
-    /// NE0009 — a method with a <see cref="System.Threading.CancellationToken"/> parameter should check for
-    /// cancellation at the start of its body.
+    /// NE0009 — a method or local function with a <see cref="System.Threading.CancellationToken"/> parameter
+    /// should check for cancellation at the start of its body.
     /// </summary>
     public static readonly DiagnosticDescriptor RequireCancellationCheck = Create(
         DiagnosticIds.NE0009,

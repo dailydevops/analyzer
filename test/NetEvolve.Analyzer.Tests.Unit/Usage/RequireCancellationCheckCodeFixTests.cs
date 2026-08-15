@@ -392,6 +392,53 @@ public sealed class RequireCancellationCheckCodeFixTests
             IsCancellationRequestedKey,
             LanguageVersion.CSharp12
         );
+
+    [Test]
+    public Task LocalFunctionArrayReturning_AddsIsCancellationRequestedWithReturnEmptyCollection() =>
+        RequireCancellationCheckCodeFixVerifier<
+            RequireCancellationCheckAnalyzer,
+            RequireCancellationCheckCodeFixProvider
+        >.VerifyCodeFixAsync(
+            """
+            using System.Threading;
+
+            public sealed class Sample
+            {
+                public int[] Run()
+                {
+                    return Compute(default);
+
+                    static int[] {|NE0009:Compute|}(CancellationToken cancellationToken)
+                    {
+                        return new[] { 42 };
+                    }
+                }
+            }
+            """,
+            """
+            using System.Threading;
+
+            public sealed class Sample
+            {
+                public int[] Run()
+                {
+                    return Compute(default);
+
+                    static int[] Compute(CancellationToken cancellationToken)
+                    {
+                        if (cancellationToken.IsCancellationRequested)
+                        {
+                            return [];
+                        }
+
+                        return new[] { 42 };
+                    }
+                }
+            }
+            """,
+            IsCancellationRequestedKey,
+            LanguageVersion.CSharp12
+        );
 #endif
 
     [Test]
@@ -1000,6 +1047,148 @@ public sealed class RequireCancellationCheckCodeFixTests
                 public void Run(CancellationToken cancellationToken)
                 {
                     cancellationToken.ThrowIfCancellationRequested();
+                }
+            }
+            """,
+            ThrowIfCancellationRequestedKey
+        );
+
+    // ---- Local functions -----------------------------------------------------------------------------------
+
+    [Test]
+    public Task LocalFunction_NoGuardClauses_AddsThrowIfCancellationRequested() =>
+        RequireCancellationCheckCodeFixVerifier<
+            RequireCancellationCheckAnalyzer,
+            RequireCancellationCheckCodeFixProvider
+        >.VerifyCodeFixAsync(
+            """
+            using System.Threading;
+            using System.Threading.Tasks;
+
+            public sealed class Sample
+            {
+                public Task RunAsync()
+                {
+                    return TestMethod(default);
+
+                    static Task {|NE0009:TestMethod|}(CancellationToken cancellationToken)
+                    {
+                        return Task.Delay(1000);
+                    }
+                }
+            }
+            """,
+            """
+            using System.Threading;
+            using System.Threading.Tasks;
+
+            public sealed class Sample
+            {
+                public Task RunAsync()
+                {
+                    return TestMethod(default);
+
+                    static Task TestMethod(CancellationToken cancellationToken)
+                    {
+                        cancellationToken.ThrowIfCancellationRequested();
+
+                        return Task.Delay(1000);
+                    }
+                }
+            }
+            """,
+            ThrowIfCancellationRequestedKey
+        );
+
+    [Test]
+    public Task LocalFunction_NoGuardClauses_AddsIsCancellationRequestedReturn() =>
+        RequireCancellationCheckCodeFixVerifier<
+            RequireCancellationCheckAnalyzer,
+            RequireCancellationCheckCodeFixProvider
+        >.VerifyCodeFixAsync(
+            """
+            using System.Threading;
+            using System.Threading.Tasks;
+
+            public sealed class Sample
+            {
+                public Task RunAsync()
+                {
+                    return TestMethod(default);
+
+                    static Task {|NE0009:TestMethod|}(CancellationToken cancellationToken)
+                    {
+                        return Task.Delay(1000);
+                    }
+                }
+            }
+            """,
+            """
+            using System.Threading;
+            using System.Threading.Tasks;
+
+            public sealed class Sample
+            {
+                public Task RunAsync()
+                {
+                    return TestMethod(default);
+
+                    static Task TestMethod(CancellationToken cancellationToken)
+                    {
+                        if (cancellationToken.IsCancellationRequested)
+                        {
+                            return default;
+                        }
+
+                        return Task.Delay(1000);
+                    }
+                }
+            }
+            """,
+            IsCancellationRequestedKey
+        );
+
+    [Test]
+    public Task MethodAndNestedLocalFunction_BothMissingCheck_FixesBoth() =>
+        RequireCancellationCheckCodeFixVerifier<
+            RequireCancellationCheckAnalyzer,
+            RequireCancellationCheckCodeFixProvider
+        >.VerifyCodeFixAsync(
+            """
+            using System.Threading;
+            using System.Threading.Tasks;
+
+            public sealed class Sample
+            {
+                public Task {|NE0009:RunAsync|}(CancellationToken cancellationToken)
+                {
+                    return TestMethod(cancellationToken);
+
+                    static Task {|NE0009:TestMethod|}(CancellationToken cancellationToken)
+                    {
+                        return Task.Delay(1000);
+                    }
+                }
+            }
+            """,
+            """
+            using System.Threading;
+            using System.Threading.Tasks;
+
+            public sealed class Sample
+            {
+                public Task RunAsync(CancellationToken cancellationToken)
+                {
+                    cancellationToken.ThrowIfCancellationRequested();
+
+                    return TestMethod(cancellationToken);
+
+                    static Task TestMethod(CancellationToken cancellationToken)
+                    {
+                        cancellationToken.ThrowIfCancellationRequested();
+
+                        return Task.Delay(1000);
+                    }
                 }
             }
             """,

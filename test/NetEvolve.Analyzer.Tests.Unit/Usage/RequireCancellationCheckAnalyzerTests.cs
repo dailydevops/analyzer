@@ -567,4 +567,93 @@ public sealed class RequireCancellationCheckAnalyzerTests
             }
             """
         );
+
+    // ---- Local functions are inspected the same way as methods -------------------------------------------
+
+    [Test]
+    public Task LocalFunction_NoGuardClauses_MissingCheck_Reports() =>
+        CSharpAnalyzerVerifier<RequireCancellationCheckAnalyzer>.VerifyAnalyzerAsync(
+            """
+            using System.Threading;
+            using System.Threading.Tasks;
+
+            public sealed class Sample
+            {
+                public Task RunAsync()
+                {
+                    return TestMethod(default);
+
+                    static Task {|NE0009:TestMethod|}(CancellationToken cancellationToken)
+                    {
+                        return Task.Delay(1000);
+                    }
+                }
+            }
+            """
+        );
+
+    [Test]
+    public Task LocalFunction_ThrowIfCancellationRequestedFirst_NoDiagnostic() =>
+        CSharpAnalyzerVerifier<RequireCancellationCheckAnalyzer>.VerifyAnalyzerAsync(
+            """
+            using System.Threading;
+            using System.Threading.Tasks;
+
+            public sealed class Sample
+            {
+                public Task RunAsync()
+                {
+                    return TestMethod(default);
+
+                    static Task TestMethod(CancellationToken cancellationToken)
+                    {
+                        cancellationToken.ThrowIfCancellationRequested();
+
+                        return Task.Delay(1000);
+                    }
+                }
+            }
+            """
+        );
+
+    [Test]
+    public Task LocalFunction_ExpressionBodied_NotFlagged() =>
+        CSharpAnalyzerVerifier<RequireCancellationCheckAnalyzer>.VerifyAnalyzerAsync(
+            """
+            using System.Threading;
+            using System.Threading.Tasks;
+
+            public sealed class Sample
+            {
+                public Task RunAsync()
+                {
+                    return TestMethod(default);
+
+                    static Task TestMethod(CancellationToken cancellationToken) => Task.Delay(1000);
+                }
+            }
+            """
+        );
+
+    [Test]
+    public Task MethodAndNestedLocalFunction_BothMissingCheck_ReportsBoth() =>
+        CSharpAnalyzerVerifier<RequireCancellationCheckAnalyzer>.VerifyAnalyzerAsync(
+            """
+            using System.Threading;
+            using System.Threading.Tasks;
+
+            public sealed class Sample
+            {
+                public Task {|NE0009:RunAsync|}(CancellationToken cancellationToken)
+                {
+                    return TestMethod(cancellationToken);
+
+                    static Task {|NE0009:TestMethod|}(CancellationToken cancellationToken)
+                    {
+                        return Task.Delay(1000);
+                    }
+                }
+            }
+            """
+        );
 }
