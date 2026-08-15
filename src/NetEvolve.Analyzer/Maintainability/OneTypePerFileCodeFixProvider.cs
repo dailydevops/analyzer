@@ -124,9 +124,10 @@ public sealed class OneTypePerFileCodeFixProvider : CodeFixProvider
         var groupGenericOverloads = ReadGroupGenericOverloads(document);
         var moved = MatchingDeclarations(root, declaration, groupGenericOverloads).ToList();
 
+        var options = document.Project.AnalyzerOptions.AnalyzerConfigOptionsProvider.GetOptions(root.SyntaxTree);
         var endsWithNewline = root.ToFullString().EndsWith("\n", StringComparison.Ordinal);
         var newText = NamespaceFileBuilder.WithTrailingNewline(
-            NamespaceFileBuilder.Build(root, NamespaceName(declaration), moved),
+            NamespaceFileBuilder.Build(root, NamespaceName(declaration), moved, options),
             endsWithNewline
         );
 

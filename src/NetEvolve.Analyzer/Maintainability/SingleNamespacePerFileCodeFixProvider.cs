@@ -84,9 +84,10 @@ public sealed class SingleNamespacePerFileCodeFixProvider : CodeFixProvider
         var root = (CompilationUnitSyntax)(await document.GetSyntaxRootAsync(cancellationToken).ConfigureAwait(false))!;
 
         var members = NamespaceFileBuilder.TopLevelTypeDeclarations(root).ToList();
+        var options = document.Project.AnalyzerOptions.AnalyzerConfigOptionsProvider.GetOptions(root.SyntaxTree);
         var endsWithNewline = root.ToFullString().EndsWith("\n", StringComparison.Ordinal);
         var newText = NamespaceFileBuilder.WithTrailingNewline(
-            NamespaceFileBuilder.Build(root, target, members),
+            NamespaceFileBuilder.Build(root, target, members, options),
             endsWithNewline
         );
 

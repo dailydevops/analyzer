@@ -14,12 +14,19 @@ using NetEvolve.Analyzer.Maintainability;
 /// </summary>
 internal static class OneTypePerFileCodeFixVerifier
 {
+    /// <summary>
+    /// <paramref name="styleOptions"/> carries raw <c>.editorconfig</c> style keys (e.g.
+    /// <c>csharp_using_directive_placement</c>) that, unlike <paramref name="properties"/>, are not
+    /// <c>build_property.</c>-prefixed.
+    /// </summary>
     public static async Task VerifyAsync(
         (string Name, string Content)[] sources,
         (string Name, string Content)[] fixedSources,
+        (string Key, string Value)[]? styleOptions = null,
         params (string Key, string Value)[] properties
     )
     {
+        styleOptions ??= [];
         var test = new CSharpCodeFixTest<OneTypePerFileAnalyzer, OneTypePerFileCodeFixProvider, DefaultVerifier>
         {
             ReferenceAssemblies = ReferenceAssemblies.Net.Net80,
@@ -35,12 +42,17 @@ internal static class OneTypePerFileCodeFixVerifier
             test.FixedState.Sources.Add((name, content));
         }
 
-        if (properties.Length > 0)
+        if (properties.Length > 0 || styleOptions.Length > 0)
         {
             var builder = new StringBuilder("is_global = true\n");
             foreach (var (key, value) in properties)
             {
                 _ = builder.Append("build_property.").Append(key).Append(" = ").Append(value).Append('\n');
+            }
+
+            foreach (var (key, value) in styleOptions)
+            {
+                _ = builder.Append(key).Append(" = ").Append(value).Append('\n');
             }
 
             // Declare the global config in both states: the fix carries it into the fixed solution, so the

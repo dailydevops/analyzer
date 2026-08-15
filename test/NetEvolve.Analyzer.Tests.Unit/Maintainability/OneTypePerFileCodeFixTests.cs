@@ -160,6 +160,54 @@ public sealed class OneTypePerFileCodeFixTests
         );
 
     [Test]
+    public Task Move_CarriesUsingDirectives_InsideNamespace_WhenConfigured() =>
+        OneTypePerFileCodeFixVerifier.VerifyAsync(
+            [
+                (
+                    "Circle.cs",
+                    """
+                    namespace Geometry;
+
+                    using System;
+
+                    public sealed class Circle { }
+
+                    public sealed class {|NE0001:Clock|}
+                    {
+                        public DateTime Now { get; }
+                    }
+                    """
+                ),
+            ],
+            [
+                (
+                    "Circle.cs",
+                    """
+                    namespace Geometry;
+
+                    using System;
+
+                    public sealed class Circle { }
+                    """
+                ),
+                (
+                    "Clock.cs",
+                    """
+                    namespace Geometry;
+
+                    using System;
+
+                    public sealed class Clock
+                    {
+                        public DateTime Now { get; }
+                    }
+                    """
+                ),
+            ],
+            [("csharp_using_directive_placement", "inside_namespace")]
+        );
+
+    [Test]
     public Task Move_CarriesUsingDirectives() =>
         OneTypePerFileCodeFixVerifier.VerifyAsync(
             [
@@ -489,7 +537,7 @@ public sealed class OneTypePerFileCodeFixTests
                     """
                 ),
             ],
-            ("NetEvolveAnalyzerGroupGenericOverloads", "true")
+            properties: ("NetEvolveAnalyzerGroupGenericOverloads", "true")
         );
 
     [Test]
