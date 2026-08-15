@@ -6,6 +6,7 @@ using System.Linq;
 using System.Text;
 using Microsoft.CodeAnalysis;
 using Microsoft.CodeAnalysis.CSharp.Syntax;
+using Microsoft.CodeAnalysis.Diagnostics;
 
 /// <summary>
 /// Shared file-text assembly for the file-organization code fixes. Builds a new source file from a set of
@@ -17,19 +18,47 @@ using Microsoft.CodeAnalysis.CSharp.Syntax;
 internal static class NamespaceFileBuilder
 {
     /// <summary>
-    /// Assembles the new file as text: the file-level usings, an optional file-scoped namespace with the FULL
-    /// dotted <paramref name="namespaceName"/> (omitted when empty), then every member in
-    /// <paramref name="members"/> rendered from its full text so leading doc comments travel with it.
+    /// Assembles the new file as text: the usings, an optional file-scoped namespace with the FULL dotted
+    /// <paramref name="namespaceName"/> (omitted when empty), then every member in <paramref name="members"/>
+    /// rendered from its full text so leading doc comments travel with it. Usings are placed before or after the
+    /// namespace declaration per the project's <c>csharp_using_directive_placement</c> .editorconfig setting
+    /// (<paramref name="options"/>), so the fix does not fight the project's own convention.
     /// </summary>
     public static string Build(
         CompilationUnitSyntax root,
         string namespaceName,
-        IReadOnlyList<MemberDeclarationSyntax> members
+        IReadOnlyList<MemberDeclarationSyntax> members,
+        AnalyzerConfigOptions? options = null
     )
     {
         var builder = new StringBuilder();
         var usings = CollectUsings(root, members);
+        var insideNamespace =
+            namespaceName.Length != 0
+            && options is not null
+            && options.TryGetValue("csharp_using_directive_placement", out var placement)
+            && placement.StartsWith("inside_namespace", StringComparison.OrdinalIgnoreCase);
 
+        if (!insideNamespace)
+        {
+            AppendUsings(builder, usings);
+        }
+
+        if (namespaceName.Length != 0)
+        {
+            _ = builder.Append("namespace ").Append(namespaceName).Append(";\n\n");
+        }
+
+        if (insideNamespace)
+        {
+            AppendUsings(builder, usings);
+        }
+
+        return builder.Append(string.Join("\n\n", members.Select(RenderMember))).ToString();
+    }
+
+    private static void AppendUsings(StringBuilder builder, List<UsingDirectiveSyntax> usings)
+    {
         foreach (var directive in usings)
         {
             _ = builder.Append(directive.ToString()).Append('\n');
@@ -39,13 +68,6 @@ internal static class NamespaceFileBuilder
         {
             _ = builder.Append('\n');
         }
-
-        if (namespaceName.Length != 0)
-        {
-            _ = builder.Append("namespace ").Append(namespaceName).Append(";\n\n");
-        }
-
-        return builder.Append(string.Join("\n\n", members.Select(RenderMember))).ToString();
     }
 
     /// <summary>
