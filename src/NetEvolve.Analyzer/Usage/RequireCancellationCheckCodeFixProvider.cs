@@ -43,7 +43,7 @@ public sealed class RequireCancellationCheckCodeFixProvider : CodeFixProvider
         var diagnostic = context.Diagnostics[0];
         var declaration = root.FindNode(diagnostic.Location.SourceSpan).AncestorsAndSelf().First(IsMemberDeclaration);
 
-        var tokenName = GetCancellationTokenParameterName(GetDeclarationParts(declaration).ParameterList!);
+        var tokenName = GetCancellationTokenParameterName(GetDeclarationParts(declaration).ParameterList);
         if (tokenName is null)
         {
             return;
@@ -88,26 +88,24 @@ public sealed class RequireCancellationCheckCodeFixProvider : CodeFixProvider
         node is MethodDeclarationSyntax or LocalFunctionStatementSyntax;
 
     // Pulls the four members shared by a method and a local function out of whichever shape 'declaration' is.
-    // Callers only ever pass a node matched by IsMemberDeclaration, so the fallback arm is unreachable; it
-    // returns the same empty-ish values GetFirstLoopBodyStatement/IsGuardClauseLike elsewhere in this file fall
-    // back to, rather than throwing, to keep every switch in this provider the same shape.
+    // Every caller passes a node matched by IsMemberDeclaration (either the analyzer-reported one, or one
+    // re-found via .First(IsMemberDeclaration)), so it is always one of these two shapes — no fallback branch
+    // to leave uncovered.
     private static (
         BlockSyntax? Body,
-        ParameterListSyntax? ParameterList,
-        TypeSyntax? ReturnType,
+        ParameterListSyntax ParameterList,
+        TypeSyntax ReturnType,
         SyntaxTokenList Modifiers
-    ) GetDeclarationParts(SyntaxNode declaration) =>
-        declaration switch
+    ) GetDeclarationParts(SyntaxNode declaration)
+    {
+        if (declaration is MethodDeclarationSyntax method)
         {
-            MethodDeclarationSyntax method => (method.Body, method.ParameterList, method.ReturnType, method.Modifiers),
-            LocalFunctionStatementSyntax localFunction => (
-                localFunction.Body,
-                localFunction.ParameterList,
-                localFunction.ReturnType,
-                localFunction.Modifiers
-            ),
-            _ => (null, null, null, default),
-        };
+            return (method.Body, method.ParameterList, method.ReturnType, method.Modifiers);
+        }
+
+        var localFunction = (LocalFunctionStatementSyntax)declaration;
+        return (localFunction.Body, localFunction.ParameterList, localFunction.ReturnType, localFunction.Modifiers);
+    }
 
     private static async Task<Document> InsertCheckAsync(
         Document document,
