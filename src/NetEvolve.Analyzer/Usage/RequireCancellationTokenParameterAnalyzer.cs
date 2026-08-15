@@ -23,8 +23,12 @@ using NetEvolve.Analyzer.Helpers;
 /// A method that has a body is only flagged when that body contains at least one call site a
 /// <see cref="System.Threading.CancellationToken"/> could actually be passed to (see
 /// <see cref="CancellationTokenCallSites"/>); otherwise the parameter the code fix would add could never
-/// be used, leaving nothing but an unused-parameter warning in its place. A method without a body — abstract,
-/// interface, or extern — has no such body to leave with an unused parameter, so it is always flagged.
+/// be used, leaving nothing but an unused-parameter warning in its place. A call that already has a genuine
+/// token passed straight into it (e.g. an ambient <c>SomeContext.Current.CancellationToken</c>) is not such a
+/// call site — it already has working cancellation support. A hardcoded <c>CancellationToken.None</c> is the
+/// exception: it signals "no cancellation" rather than a real token, so it still counts as evidence the method
+/// needs its own parameter. A method without a body — abstract, interface, or extern — has no such body to
+/// leave with an unused parameter, so it is always flagged.
 /// </summary>
 [DiagnosticAnalyzer(LanguageNames.CSharp)]
 public sealed class RequireCancellationTokenParameterAnalyzer : DiagnosticAnalyzer

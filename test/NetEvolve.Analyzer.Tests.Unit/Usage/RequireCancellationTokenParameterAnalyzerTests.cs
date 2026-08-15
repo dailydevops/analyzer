@@ -340,6 +340,28 @@ public sealed class RequireCancellationTokenParameterAnalyzerTests
             """
         );
 
+    // ---- Negative: a call already wired with a genuine token (not CancellationToken.None) from an ambient
+    // ---- source needs no parameter of its own to be useful ---------------------------------------------------
+
+    [Test]
+    public Task CallAlreadyPassingAmbientToken_NoDiagnostic() =>
+        CSharpAnalyzerVerifier<RequireCancellationTokenParameterAnalyzer>.VerifyAnalyzerAsync(
+            """
+            using System.Threading;
+            using System.Threading.Tasks;
+
+            public sealed class Sample
+            {
+                public Task Run() => Task.Delay(25, Ambient.CancellationToken);
+            }
+
+            public static class Ambient
+            {
+                public static CancellationToken CancellationToken => default;
+            }
+            """
+        );
+
     [Test]
     public Task AppendableCallOnlyInsideLocalFunction_NoDiagnostic() =>
         CSharpAnalyzerVerifier<RequireCancellationTokenParameterAnalyzer>.VerifyAnalyzerAsync(
