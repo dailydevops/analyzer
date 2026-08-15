@@ -18,10 +18,13 @@ internal static class CancellationTokenCallSites
     /// <summary>
     /// Whether <paramref name="method"/>'s body/expression-body has any use for a
     /// <see cref="System.Threading.CancellationToken"/> parameter: either a call site the token could be
-    /// appended to, or an expression that already produces/consumes one (e.g. a hardcoded
-    /// <c>CancellationToken.None</c>) — evidence the method is already cancellation-aware even though nothing
-    /// wires a real token through yet. A method whose body has neither would end up with a parameter it can
-    /// never actually use, so the analyzer uses this to skip it.
+    /// appended to, or an expression that produces/consumes one without already being wired straight into a
+    /// call — e.g. a hardcoded <c>CancellationToken.None</c>, which signals "no cancellation" rather than a
+    /// real token, whether it sits bare or is passed on to a call. An expression that is itself a genuine token
+    /// already passed directly as a call argument (e.g. an ambient <c>SomeContext.Current.CancellationToken</c>)
+    /// does not count — that call site already has real cancellation support, so it isn't evidence the method
+    /// still needs its own parameter. A method whose body has none of the above would end up with a parameter
+    /// it can never actually use, so the analyzer uses this to skip it.
     /// </summary>
     public static bool HasUsableCancellationToken(SemanticModel semanticModel, MethodDeclarationSyntax method)
     {
@@ -38,8 +41,32 @@ internal static class CancellationTokenCallSites
                     ? TryGetAppendableParameterName(semanticModel, invocation, out _)
                     : node is ExpressionSyntax expression
                         && IsCancellationToken(semanticModel.GetTypeInfo(expression).Type)
+                        && !IsNestedInCancellationTokenExpression(semanticModel, expression)
+                        && !IsAlreadyWiredThroughArgument(semanticModel, expression)
             );
     }
+
+    // Whether 'expression' is a sub-expression of a larger expression that is itself CancellationToken-typed
+    // (e.g. the "CancellationToken" name half of a "Foo.CancellationToken" member access) — the outer
+    // expression already carries the same signal, so this one would only be a redundant duplicate.
+    private static bool IsNestedInCancellationTokenExpression(
+        SemanticModel semanticModel,
+        ExpressionSyntax expression
+    ) => expression.Parent is ExpressionSyntax parent && IsCancellationToken(semanticModel.GetTypeInfo(parent).Type);
+
+    // Whether 'expression' is passed straight into a call as an argument and is a genuine token (anything but
+    // the hardcoded CancellationToken.None, which signals "no cancellation" rather than a real one) — evidence
+    // the call already has a working token, not just something the method could still use one for.
+    private static bool IsAlreadyWiredThroughArgument(SemanticModel semanticModel, ExpressionSyntax expression) =>
+        expression.Parent is ArgumentSyntax && !IsCancellationTokenNone(semanticModel, expression);
+
+    private static bool IsCancellationTokenNone(SemanticModel semanticModel, ExpressionSyntax expression) =>
+        semanticModel.GetSymbolInfo(expression).Symbol
+            is {
+                Name: "None",
+                ContainingType.Name: "CancellationToken",
+                ContainingType.ContainingNamespace.Name: "Threading"
+            };
 
     /// <summary>
     /// All call sites within <paramref name="method"/>'s body/expression-body that a
