@@ -51,6 +51,45 @@ public sealed class RequireCancellationCheckCodeFixTests
         );
 
     [Test]
+    public Task NoGuardClauses_FollowingStatementHasLeadingComment_AddsBlankLineBeforeComment() =>
+        RequireCancellationCheckCodeFixVerifier<
+            RequireCancellationCheckAnalyzer,
+            RequireCancellationCheckCodeFixProvider
+        >.VerifyCodeFixAsync(
+            """
+            using System.Threading;
+
+            public sealed class Sample
+            {
+                public void {|NE0009:Run|}(CancellationToken cancellationToken)
+                {
+                    // Arrange
+                    DoWork();
+                }
+
+                private static void DoWork() { }
+            }
+            """,
+            """
+            using System.Threading;
+
+            public sealed class Sample
+            {
+                public void Run(CancellationToken cancellationToken)
+                {
+                    cancellationToken.ThrowIfCancellationRequested();
+
+                    // Arrange
+                    DoWork();
+                }
+
+                private static void DoWork() { }
+            }
+            """,
+            ThrowIfCancellationRequestedKey
+        );
+
+    [Test]
     public Task GuardClause_AddsThrowIfCancellationRequestedAfterGuard() =>
         RequireCancellationCheckCodeFixVerifier<
             RequireCancellationCheckAnalyzer,
@@ -967,7 +1006,7 @@ public sealed class RequireCancellationCheckCodeFixTests
         );
 
     [Test]
-    public Task CommentBeforeInsertionPoint_AddsIsCancellationRequestedWithoutDuplicatingComment() =>
+    public Task CommentBeforeInsertionPoint_AddsIsCancellationRequestedWithBlankLineBeforeComment() =>
         RequireCancellationCheckCodeFixVerifier<
             RequireCancellationCheckAnalyzer,
             RequireCancellationCheckCodeFixProvider
@@ -995,6 +1034,7 @@ public sealed class RequireCancellationCheckCodeFixTests
                     {
                         return default;
                     }
+
                     // do the work
                     return 42;
                 }

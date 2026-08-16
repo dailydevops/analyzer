@@ -140,28 +140,34 @@ public sealed class RequireCancellationCheckCodeFixProvider : CodeFixProvider
 
         var newStatements = statements.Insert(guardCount, checkStatement);
 
-        // Normalize the gap between the inserted check and whatever statement follows it to exactly one blank
-        // line: none was there before (the check would otherwise butt up directly against the next statement),
-        // and if the source already had extra blank lines there, this collapses them back down to one. Only do
-        // this when the following statement's leading trivia is purely blank-line filler (end-of-line and
-        // whitespace); if it also carries a comment (or anything else), replacing the whole trivia list would
-        // silently delete it, so leave it untouched and accept whatever gap was already there.
+        // Normalize the gap between the inserted check and whatever follows it to exactly one blank line: none
+        // was there before (the check would otherwise butt up directly against it), and if the source already
+        // had extra blank lines there, this collapses them back down to one. Only the leading run of pure
+        // blank-line filler (end-of-line and whitespace) is replaced; anything after that run — a comment, a
+        // directive, whatever — is kept as-is, so a leading "// Arrange"-style comment still gets its blank
+        // line above it without losing the comment itself.
         if (guardCount < statements.Count)
         {
             var followingStatement = newStatements[guardCount + 1];
             var leadingTrivia = followingStatement.GetLeadingTrivia();
-            if (
-                leadingTrivia.All(trivia =>
-                    trivia.IsKind(SyntaxKind.EndOfLineTrivia) || trivia.IsKind(SyntaxKind.WhitespaceTrivia)
+            var blankRunEnd = 0;
+            while (
+                blankRunEnd < leadingTrivia.Count
+                && (
+                    leadingTrivia[blankRunEnd].IsKind(SyntaxKind.EndOfLineTrivia)
+                    || leadingTrivia[blankRunEnd].IsKind(SyntaxKind.WhitespaceTrivia)
                 )
             )
             {
-                var normalizedFollowing = followingStatement.WithLeadingTrivia(
-                    SyntaxFactory.EndOfLine("\n"),
-                    SyntaxFactory.Whitespace(indentation)
-                );
-                newStatements = newStatements.Replace(followingStatement, normalizedFollowing);
+                blankRunEnd++;
             }
+
+            var normalizedFollowing = followingStatement.WithLeadingTrivia(
+                SyntaxFactory
+                    .TriviaList(SyntaxFactory.EndOfLine("\n"), SyntaxFactory.Whitespace(indentation))
+                    .AddRange(leadingTrivia.Skip(blankRunEnd))
+            );
+            newStatements = newStatements.Replace(followingStatement, normalizedFollowing);
         }
 
         var newBody = body.WithStatements(newStatements);
