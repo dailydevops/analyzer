@@ -339,6 +339,27 @@ public sealed class RequireCancellationCheckAnalyzerTests
         );
 
     [Test]
+    public Task WhileLoopConditionNegatedIsCancellationRequested_NoDiagnostic() =>
+        CSharpAnalyzerVerifier<RequireCancellationCheckAnalyzer>.VerifyAnalyzerAsync(
+            """
+            using System.Threading;
+
+            public sealed class Sample
+            {
+                public void Run(CancellationToken cancellationToken)
+                {
+                    while (!cancellationToken.IsCancellationRequested)
+                    {
+                        DoWork();
+                    }
+                }
+
+                private static void DoWork() { }
+            }
+            """
+        );
+
+    [Test]
     public Task GuardClause_ThenDoLoopFirstStatementThrowIfCancellationRequested_NoDiagnostic() =>
         CSharpAnalyzerVerifier<RequireCancellationCheckAnalyzer>.VerifyAnalyzerAsync(
             """
