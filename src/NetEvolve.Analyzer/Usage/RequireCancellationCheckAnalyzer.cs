@@ -17,9 +17,9 @@ using Microsoft.CodeAnalysis.Diagnostics;
 /// first statement is itself a <see langword="for"/>/<see langword="foreach"/>/<see langword="while"/>/
 /// <see langword="do"/> loop, the same check is accepted as the first statement of the loop's body instead, and
 /// so on through any further nesting — a loop-of-loops is satisfied as soon as one nesting level's leading
-/// statement is the check. A <see langword="while"/> loop whose own condition is
-/// <c>!token.IsCancellationRequested</c> is accepted outright, since the condition already guards every
-/// iteration. Expression-bodied members are skipped, since they cannot structurally hold a guard
+/// statement is the check. A <see langword="for"/>, <see langword="while"/>, or <see langword="do"/> loop
+/// whose own condition is <c>!token.IsCancellationRequested</c> is accepted outright, since the condition
+/// already guards the loop. Expression-bodied members are skipped, since they cannot structurally hold a guard
 /// statement; members without a body (interface members, abstract, extern, or partial declarations without an
 /// implementation) are skipped as well, since there is no body to check.
 /// </summary>
@@ -159,11 +159,11 @@ public sealed class RequireCancellationCheckAnalyzer : DiagnosticAnalyzer
 
     /// <summary>
     /// Whether <paramref name="statement"/> is itself a cancellation check against one of
-    /// <paramref name="tokenNames"/> — or, if it is a <see langword="while"/> loop whose own condition is
-    /// <c>!token.IsCancellationRequested</c>, that condition guards every iteration by itself — or, for any
-    /// <see langword="for"/>/<see langword="foreach"/>/<see langword="while"/>/<see langword="do"/> loop,
-    /// whether the first statement of its body is (checked recursively, so a loop nested at any depth is
-    /// matched as long as its leading statement is the check).
+    /// <paramref name="tokenNames"/> — or, if it is a <see langword="for"/>, <see langword="while"/>, or
+    /// <see langword="do"/> loop whose own condition is <c>!token.IsCancellationRequested</c>, that condition
+    /// guards the loop by itself — or, for any <see langword="for"/>/<see langword="foreach"/>/
+    /// <see langword="while"/>/<see langword="do"/> loop, whether the first statement of its body is (checked
+    /// recursively, so a loop nested at any depth is matched as long as its leading statement is the check).
     /// </summary>
     private static bool IsCheckOrLeadingLoopCheck(StatementSyntax statement, ImmutableArray<string> tokenNames)
     {
@@ -175,13 +175,20 @@ public sealed class RequireCancellationCheckAnalyzer : DiagnosticAnalyzer
             return true;
         }
 
-        // 'while (!token.IsCancellationRequested) { ... }' already guards every iteration via its own
-        // condition — the loop simply never runs again once cancellation is requested — so it satisfies the
-        // rule without needing a redundant check as the first statement of its body.
-        if (
-            statement is WhileStatementSyntax whileStatement
-            && IsNegatedIsCancellationRequested(whileStatement.Condition, tokenNames)
-        )
+        // 'while (!token.IsCancellationRequested)' / 'for (...; !token.IsCancellationRequested; ...)' /
+        // 'do { ... } while (!token.IsCancellationRequested)' already check cancellation via their own
+        // condition, so they satisfy the rule without needing a redundant check as the first statement of the
+        // loop body. For 'do', the first iteration always runs before the condition is ever evaluated — the
+        // caller accepted that trade-off explicitly.
+        var loopCondition = statement switch
+        {
+            WhileStatementSyntax whileStatement => whileStatement.Condition,
+            ForStatementSyntax forStatement => forStatement.Condition,
+            DoStatementSyntax doStatement => doStatement.Condition,
+            _ => null,
+        };
+
+        if (loopCondition is not null && IsNegatedIsCancellationRequested(loopCondition, tokenNames))
         {
             return true;
         }

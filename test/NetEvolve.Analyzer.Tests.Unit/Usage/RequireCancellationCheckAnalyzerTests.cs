@@ -360,6 +360,48 @@ public sealed class RequireCancellationCheckAnalyzerTests
         );
 
     [Test]
+    public Task ForLoopConditionNegatedIsCancellationRequested_NoDiagnostic() =>
+        CSharpAnalyzerVerifier<RequireCancellationCheckAnalyzer>.VerifyAnalyzerAsync(
+            """
+            using System.Threading;
+
+            public sealed class Sample
+            {
+                public void Run(int count, CancellationToken cancellationToken)
+                {
+                    for (var i = 0; !cancellationToken.IsCancellationRequested; i++)
+                    {
+                        DoWork(i);
+                    }
+                }
+
+                private static void DoWork(int value) { }
+            }
+            """
+        );
+
+    [Test]
+    public Task DoLoopConditionNegatedIsCancellationRequested_NoDiagnostic() =>
+        CSharpAnalyzerVerifier<RequireCancellationCheckAnalyzer>.VerifyAnalyzerAsync(
+            """
+            using System.Threading;
+
+            public sealed class Sample
+            {
+                public void Run(CancellationToken cancellationToken)
+                {
+                    do
+                    {
+                        DoWork();
+                    } while (!cancellationToken.IsCancellationRequested);
+                }
+
+                private static void DoWork() { }
+            }
+            """
+        );
+
+    [Test]
     public Task GuardClause_ThenDoLoopFirstStatementThrowIfCancellationRequested_NoDiagnostic() =>
         CSharpAnalyzerVerifier<RequireCancellationCheckAnalyzer>.VerifyAnalyzerAsync(
             """
