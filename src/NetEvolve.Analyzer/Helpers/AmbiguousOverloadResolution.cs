@@ -47,11 +47,9 @@ internal static class AmbiguousOverloadResolution
             return fallback;
         }
 
+        // 'argument' is one of 'argumentList.Arguments' by construction (its Parent is argumentList), so it's
+        // always found.
         var index = argumentList.Arguments.IndexOf(argument);
-        if (index < 0)
-        {
-            return fallback;
-        }
 
         if (
             semanticModel.GetSymbolInfo(invocationOrCreation, cancellationToken).Symbol

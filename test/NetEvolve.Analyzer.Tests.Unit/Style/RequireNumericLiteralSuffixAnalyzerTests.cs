@@ -127,11 +127,58 @@ public sealed class RequireNumericLiteralSuffixAnalyzerTests
             """
             public sealed class Sample
             {
+                // A same-named overload with too few parameters for this argument position is filtered out
+                // rather than considered a candidate.
+                public void Accept() { }
+
                 public void Accept(long number) { }
 
                 public void Accept(double number) { }
 
                 public void Call() => Accept({|NE0012:0|});
+            }
+            """
+        );
+
+    [Test]
+    public Task OverloadResolution_NamedArgument_FallsBackToRequiredSuffix() =>
+        CSharpAnalyzerVerifier<RequireNumericLiteralSuffixAnalyzer>.VerifyAnalyzerAsync(
+            """
+            public sealed class Sample
+            {
+                public void Accept(long number) { }
+
+                public void Accept(double number) { }
+
+                public void Call() => Accept(number: {|NE0012:0|});
+            }
+            """
+        );
+
+    [Test]
+    public Task OverloadResolution_ConstructorLongAndDoubleOverloads_NoSuffix_ReportsDiagnostic() =>
+        CSharpAnalyzerVerifier<RequireNumericLiteralSuffixAnalyzer>.VerifyAnalyzerAsync(
+            """
+            public sealed class Sample
+            {
+                public Sample(long number) { }
+
+                public Sample(double number) { }
+
+                public static Sample Create() => new Sample({|NE0012:0|});
+            }
+            """
+        );
+
+    [Test]
+    public Task Indexer_ArgumentResolvesToPropertyNotMethod_FallsBackToRequiredSuffix() =>
+        CSharpAnalyzerVerifier<RequireNumericLiteralSuffixAnalyzer>.VerifyAnalyzerAsync(
+            """
+            public sealed class Sample
+            {
+                public long this[long index] => index;
+
+                public long Value => this[{|NE0012:0|}];
             }
             """
         );
