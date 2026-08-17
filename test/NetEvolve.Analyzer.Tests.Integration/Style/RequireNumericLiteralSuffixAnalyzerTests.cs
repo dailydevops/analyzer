@@ -1,4 +1,4 @@
-namespace NetEvolve.Analyzer.Tests.Integration.Style;
+﻿namespace NetEvolve.Analyzer.Tests.Integration.Style;
 
 using System;
 using System.Linq;
@@ -36,6 +36,52 @@ public sealed class RequireNumericLiteralSuffixAnalyzerTests
         var ne0012 = diagnostics.Where(IsNe0012).ToArray();
         await Assert.That(ne0012.Length).IsEqualTo(1);
         await Assert.That(ne0012[0].Severity).IsEqualTo(DiagnosticSeverity.Info);
+    }
+
+    [Test]
+    public async Task OverloadResolution_LongAndDoubleOverloads_NoSuffix_ReportsInfo()
+    {
+        const string source = """
+            public sealed class Sample
+            {
+                public void Accept(long number) { }
+
+                public void Accept(double number) { }
+
+                public void Call() => Accept(0);
+            }
+            """;
+
+        var diagnostics = await AnalyzerCompiler
+            .GetAnalyzerDiagnosticsAsync(source, new RequireNumericLiteralSuffixAnalyzer())
+            .ConfigureAwait(false);
+
+        var ne0012 = diagnostics.Where(IsNe0012).ToArray();
+        await Assert.That(ne0012.Length).IsEqualTo(1);
+        await Assert.That(ne0012[0].Severity).IsEqualTo(DiagnosticSeverity.Info);
+    }
+
+    [Test]
+    [Arguments("0L")]
+    [Arguments("0D")]
+    public async Task OverloadResolution_LongAndDoubleOverloads_EitherAcceptedSuffix_ReportsNothing(string literal)
+    {
+        var source = $$"""
+            public sealed class Sample
+            {
+                public void Accept(long number) { }
+
+                public void Accept(double number) { }
+
+                public void Call() => Accept({{literal}});
+            }
+            """;
+
+        var diagnostics = await AnalyzerCompiler
+            .GetAnalyzerDiagnosticsAsync(source, new RequireNumericLiteralSuffixAnalyzer())
+            .ConfigureAwait(false);
+
+        await Assert.That(diagnostics.Any(IsNe0012)).IsFalse();
     }
 
     [Test]
