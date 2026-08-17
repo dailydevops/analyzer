@@ -72,6 +72,12 @@ internal sealed class RequireNumericLiteralSuffixSuppressor : NetEvolveSuppresso
         }
 
         var (_, suffix) = NumericLiteralSuffix.SplitSuffix(literal.Token.Text);
-        return !string.Equals(suffix, required, StringComparison.Ordinal);
+        var validSuffixes = AmbiguousOverloadResolution.GetValidSuffixes(
+            semanticModel,
+            literal,
+            required,
+            cancellationToken
+        );
+        return !validSuffixes.Contains(suffix, StringComparer.Ordinal);
     }
 }

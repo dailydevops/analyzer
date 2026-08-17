@@ -142,4 +142,41 @@ public sealed class RequireNumericLiteralSuffixCodeFixTests
             RequireNumericLiteralSuffixAnalyzer,
             RequireNumericLiteralSuffixCodeFixProvider
         >.VerifyCodeFixAsync(before, after);
+
+    // ---- Overload resolution: ambiguous type offers one targeted action per accepted suffix, not a single
+    // guess (declaration order: 'long' first, 'double' second, so index 0 is 'L' and index 1 is 'D'). --------
+
+    [Test]
+    [Arguments(0, "0L")]
+    [Arguments(1, "0D")]
+    public Task OverloadResolution_LongAndDoubleOverloads_OffersOneActionPerSuffix(
+        int codeActionIndex,
+        string fixedLiteral
+    ) =>
+        CSharpCodeFixVerifier<
+            RequireNumericLiteralSuffixAnalyzer,
+            RequireNumericLiteralSuffixCodeFixProvider
+        >.VerifyCodeFixAsync(
+            """
+            public sealed class Sample
+            {
+                public void Accept(long number) { }
+
+                public void Accept(double number) { }
+
+                public void Call() => Accept({|NE0012:0|});
+            }
+            """,
+            $$"""
+            public sealed class Sample
+            {
+                public void Accept(long number) { }
+
+                public void Accept(double number) { }
+
+                public void Call() => Accept({{fixedLiteral}});
+            }
+            """,
+            codeActionIndex
+        );
 }

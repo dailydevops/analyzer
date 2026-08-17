@@ -22,13 +22,33 @@ internal static class CSharpCodeFixVerifier<TAnalyzer, TCodeFix>
         CSharpCodeFixVerifier<TAnalyzer, TCodeFix, DefaultVerifier>.Diagnostic(diagnosticId);
 
     /// <summary>Applies the code fix to <paramref name="source"/> and asserts the result equals <paramref name="fixedSource"/>.</summary>
-    public static async Task VerifyCodeFixAsync(string source, string fixedSource, params DiagnosticResult[] expected)
+    public static Task VerifyCodeFixAsync(string source, string fixedSource, params DiagnosticResult[] expected) =>
+        VerifyCodeFixAsync(source, fixedSource, codeActionIndex: null, expected);
+
+    /// <summary>
+    /// Applies the code fix at <paramref name="codeActionIndex"/> to <paramref name="source"/> and asserts the
+    /// result equals <paramref name="fixedSource"/>. Use when the fix registers more than one code action for
+    /// the same diagnostic (e.g. an ambiguous-overload suggestion offering several suffixes). The Fix All
+    /// check is skipped whenever an index is given — those actions carry no equivalence key on purpose (no
+    /// Fix All support), so the framework's default "Fix All reproduces the same result" assumption doesn't
+    /// apply.
+    /// </summary>
+    public static async Task VerifyCodeFixAsync(
+        string source,
+        string fixedSource,
+        int? codeActionIndex,
+        params DiagnosticResult[] expected
+    )
     {
         var test = new CSharpCodeFixTest<TAnalyzer, TCodeFix, DefaultVerifier>
         {
             TestCode = source,
             FixedCode = fixedSource,
             ReferenceAssemblies = ReferenceAssemblies.Net.Net80,
+            CodeActionIndex = codeActionIndex,
+            CodeFixTestBehaviors = codeActionIndex is null
+                ? CodeFixTestBehaviors.None
+                : CodeFixTestBehaviors.SkipFixAllCheck,
         };
 
         test.ExpectedDiagnostics.AddRange(expected);

@@ -1,4 +1,4 @@
-namespace NetEvolve.Analyzer.Tests.Unit.Style;
+﻿namespace NetEvolve.Analyzer.Tests.Unit.Style;
 
 using System;
 using System.Threading.Tasks;
@@ -112,6 +112,78 @@ public sealed class RequireNumericLiteralSuffixAnalyzerTests
     )]
     public Task MissingSuffix_VariousContexts_ReportsDiagnostic(string source) =>
         CSharpAnalyzerVerifier<RequireNumericLiteralSuffixAnalyzer>.VerifyAnalyzerAsync(source);
+
+    // ---- Overload resolution: a literal's type resolved via overload resolution among sibling overloads with
+    // different suffixable numeric types accepts any of those types' suffixes — that overload set (and thus
+    // the picked type) can differ between .NET versions, so forcing exactly one suffix here would flip-flop
+    // across a multi-targeted project's target frameworks (e.g. TimeSpan.FromMinutes gained a 'long' overload
+    // in .NET 9 alongside its pre-existing 'double' one; a bare '5' needs 'D' on net8.0 but 'L' on net9.0+).
+    // No suffix at all is still flagged, since none of the accepted suffixes were used. A single, unambiguous
+    // overload is unaffected and still requires exactly its canonical suffix. -----------------------------------
+
+    [Test]
+    public Task OverloadResolution_LongAndDoubleOverloads_NoSuffix_ReportsDiagnostic() =>
+        CSharpAnalyzerVerifier<RequireNumericLiteralSuffixAnalyzer>.VerifyAnalyzerAsync(
+            """
+            public sealed class Sample
+            {
+                public void Accept(long number) { }
+
+                public void Accept(double number) { }
+
+                public void Call() => Accept({|NE0012:0|});
+            }
+            """
+        );
+
+    [Test]
+    [Arguments("0L")]
+    [Arguments("0D")]
+    public Task OverloadResolution_LongAndDoubleOverloads_EitherAcceptedSuffix_ReportsNothing(string literal) =>
+        CSharpAnalyzerVerifier<RequireNumericLiteralSuffixAnalyzer>.VerifyAnalyzerAsync(
+            $$"""
+            public sealed class Sample
+            {
+                public void Accept(long number) { }
+
+                public void Accept(double number) { }
+
+                public void Call() => Accept({{literal}});
+            }
+            """
+        );
+
+    [Test]
+    public Task OverloadResolution_SingleOverload_StillReportsDiagnostic() =>
+        CSharpAnalyzerVerifier<RequireNumericLiteralSuffixAnalyzer>.VerifyAnalyzerAsync(
+            """
+            public sealed class Sample
+            {
+                public void Accept(long number) { }
+
+                public void Call() => Accept({|NE0012:0|});
+            }
+            """
+        );
+
+    // ---- Real-world: TimeSpan.FromMinutes gained a 'long' overload in .NET 9 alongside the pre-existing
+    // 'double' one (net8.0/netstandard2.0 still only have 'double'). An explicit 'D' suffix forces the
+    // 'double' overload — and is already correctly suffixed for it — on every target framework, so it's the
+    // one portable fix. This test runs against all three of this project's TargetFrameworks
+    // (net8.0/net9.0/net10.0), proving 'D' never flags on any of them.
+
+    [Test]
+    public Task TimeSpanFromMinutes_ExplicitDoubleSuffix_ReportsNothing() =>
+        CSharpAnalyzerVerifier<RequireNumericLiteralSuffixAnalyzer>.VerifyAnalyzerAsync(
+            """
+            using System;
+
+            public sealed class Sample
+            {
+                public TimeSpan Value = TimeSpan.FromMinutes(5D);
+            }
+            """
+        );
 
     // ---- Negative: already correctly suffixed --------------------------------------------------------------
 

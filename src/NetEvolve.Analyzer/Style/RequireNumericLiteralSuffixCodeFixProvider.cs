@@ -1,4 +1,4 @@
-namespace NetEvolve.Analyzer.Style;
+﻿namespace NetEvolve.Analyzer.Style;
 
 using System.Collections.Immutable;
 using System.Composition;
@@ -14,7 +14,10 @@ using NetEvolve.Analyzer.Helpers;
 
 /// <summary>
 /// Code fix for <see cref="RequireNumericLiteralSuffixAnalyzer">NE0012</see>. Rewrites the literal token so
-/// its digit portion carries the canonical suffix, replacing whatever suffix (if any) was there before.
+/// its digit portion carries the canonical suffix, replacing whatever suffix (if any) was there before. When
+/// the literal's type was picked by overload resolution among sibling overloads that disagree on the numeric
+/// type, one targeted action is offered per accepted suffix instead of a single guess, and none of them
+/// support Fix All — see <see cref="AmbiguousOverloadResolution.GetValidSuffixes"/>.
 /// </summary>
 [ExportCodeFixProvider(LanguageNames.CSharp, Name = nameof(RequireNumericLiteralSuffixCodeFixProvider))]
 [Shared]
@@ -50,6 +53,19 @@ public sealed class RequireNumericLiteralSuffixCodeFixProvider : CodeFixProvider
             return;
         }
 
+        var validSuffixes = AmbiguousOverloadResolution.GetValidSuffixes(
+            semanticModel,
+            literal,
+            required,
+            context.CancellationToken
+        );
+
+        if (validSuffixes.Length > 1)
+        {
+            RegisterAmbiguousFixes(context, diagnostic, literal, validSuffixes);
+            return;
+        }
+
         context.RegisterCodeFix(
             CodeAction.Create(
                 $"Use the '{required}' suffix",
@@ -58,6 +74,32 @@ public sealed class RequireNumericLiteralSuffixCodeFixProvider : CodeFixProvider
             ),
             diagnostic
         );
+    }
+
+    // Which suffix is "correct" here depends on which overload is intended, and that overload set can differ
+    // across the target frameworks of a multi-targeted project — so this is a deliberate, per-site choice
+    // rather than a mechanical rewrite. Each option gets no equivalence key, which keeps it out of Fix All:
+    // batch-applying one letter to every such site would just replace one silent guess with another.
+    private static void RegisterAmbiguousFixes(
+        CodeFixContext context,
+        Diagnostic diagnostic,
+        LiteralExpressionSyntax literal,
+        ImmutableArray<string> validSuffixes
+    )
+    {
+        foreach (var suffix in validSuffixes)
+        {
+            // RS1010: the missing equivalence key is intentional here — see the comment above.
+#pragma warning disable RS1010
+            context.RegisterCodeFix(
+                CodeAction.Create(
+                    $"Use the '{suffix}' suffix",
+                    cancellationToken => AddSuffixAsync(context.Document, literal, suffix, cancellationToken)
+                ),
+                diagnostic
+            );
+#pragma warning restore RS1010
+        }
     }
 
     private static async Task<Document> AddSuffixAsync(

@@ -79,6 +79,46 @@ public sealed class RequireNumericLiteralSuffixSuppressorTests
     }
 
     [Test]
+    public async Task OverloadResolution_LongAndDoubleOverloads_NoSuffix_S818IsSuppressed()
+    {
+        // NE0012 also reports here: '0' carries none of the accepted suffixes ('L' or 'D').
+        const string source = """
+            public sealed class Sample
+            {
+                public void Accept(long number) { }
+
+                public void Accept(double number) { }
+
+                public void Call() => Accept(0);
+            }
+            """;
+
+        var diagnostics = await GetDiagnosticsAsync(source).ConfigureAwait(false);
+
+        await Assert.That(SingleS818(diagnostics).IsSuppressed).IsTrue();
+    }
+
+    [Test]
+    public async Task OverloadResolution_LongAndDoubleOverloads_EitherAcceptedSuffix_S818IsNotSuppressed()
+    {
+        // NE0012 does not report here: '0D' already carries one of the accepted suffixes ('L' or 'D').
+        const string source = """
+            public sealed class Sample
+            {
+                public void Accept(long number) { }
+
+                public void Accept(double number) { }
+
+                public void Call() => Accept(0D);
+            }
+            """;
+
+        var diagnostics = await GetDiagnosticsAsync(source).ConfigureAwait(false);
+
+        await Assert.That(SingleS818(diagnostics).IsSuppressed).IsFalse();
+    }
+
+    [Test]
     public async Task NoSuffixableTarget_S818IsNotSuppressed()
     {
         // The literal isn't converted to one of the six suffixable types, so NE0012 never applies.

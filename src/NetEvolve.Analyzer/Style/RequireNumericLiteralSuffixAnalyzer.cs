@@ -2,6 +2,7 @@ namespace NetEvolve.Analyzer.Style;
 
 using System;
 using System.Collections.Immutable;
+using System.Linq;
 using Microsoft.CodeAnalysis;
 using Microsoft.CodeAnalysis.CSharp;
 using Microsoft.CodeAnalysis.CSharp.Syntax;
@@ -14,7 +15,12 @@ using NetEvolve.Analyzer.Helpers;
 /// <see langword="ulong"/>/<c>UL</c>, <see langword="uint"/>/<c>U</c>, <see langword="float"/>/<c>F</c>,
 /// <see langword="double"/>/<c>D</c>, and <see langword="decimal"/>/<c>M</c>). A hexadecimal or binary
 /// integer literal converted to <see langword="float"/>, <see langword="double"/>, or <see langword="decimal"/>
-/// is left alone — that format has no such suffix to add. Generated code is skipped.
+/// is left alone — that format has no such suffix to add. A literal whose type was picked by overload
+/// resolution among sibling overloads taking a different suffixable numeric type at the same position accepts
+/// any of those types' suffixes, since that overload set (and thus the picked type) can differ between .NET
+/// versions — see <see cref="AmbiguousOverloadResolution.GetValidSuffixes"/>. Its
+/// code fix then offers one targeted action per accepted suffix instead of a single, possibly wrong one, with
+/// no Fix All — each site needs its own, deliberate pick. Generated code is skipped.
 /// </summary>
 [DiagnosticAnalyzer(LanguageNames.CSharp)]
 public sealed class RequireNumericLiteralSuffixAnalyzer : DiagnosticAnalyzer
@@ -54,7 +60,13 @@ public sealed class RequireNumericLiteralSuffixAnalyzer : DiagnosticAnalyzer
         }
 
         var (digits, suffix) = NumericLiteralSuffix.SplitSuffix(text);
-        if (string.Equals(suffix, required, StringComparison.Ordinal))
+        var validSuffixes = AmbiguousOverloadResolution.GetValidSuffixes(
+            context.SemanticModel,
+            literal,
+            required,
+            context.CancellationToken
+        );
+        if (validSuffixes.Contains(suffix, StringComparer.Ordinal))
         {
             return;
         }
