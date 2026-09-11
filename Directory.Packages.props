@@ -29,6 +29,6 @@
     <PackageVersion Include="TUnit" Version="1.66.27" />
     <PackageVersion Include="Microsoft.CodeAnalysis.CSharp.Analyzer.Testing" Version="1.1.4" />
     <PackageVersion Include="Microsoft.CodeAnalysis.CSharp.CodeFix.Testing" Version="1.1.4" />
-    <PackageVersion Include="Polyfill" Version="11.2.0" />
+    <PackageVersion Include="Polyfill" Version="11.3.0" />
   </ItemGroup>
 </Project>
