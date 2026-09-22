@@ -245,6 +245,68 @@ public sealed class AvoidRedundantCollectionClearAnalyzerTests
             """
         );
 
+    // ---- Negative: an optional-parameter 'Clear' resolves with Parameters.Length != 0 even at a 0-arg call --
+
+    [Test]
+    public Task OptionalParameterClear_NoDiagnostic() =>
+        CSharpAnalyzerVerifier<AvoidRedundantCollectionClearAnalyzer>.VerifyAnalyzerAsync(
+            """
+            public sealed class Sample
+            {
+                public void Run()
+                {
+                    var buffer = new Buffer();
+                    buffer.Clear();
+                }
+
+                private sealed class Buffer
+                {
+                    public void Clear(int count = 0) { }
+                }
+            }
+            """
+        );
+
+    // ---- Negative: the receiver is a field, not a local -------------------------------------------------------
+
+    [Test]
+    public Task FieldReceiver_NoDiagnostic() =>
+        CSharpAnalyzerVerifier<AvoidRedundantCollectionClearAnalyzer>.VerifyAnalyzerAsync(
+            """
+            using System.Collections.Generic;
+
+            public sealed class Sample
+            {
+                private readonly List<long> _list = new();
+
+                public void Run()
+                {
+                    _list.Clear();
+                }
+            }
+            """
+        );
+
+    // ---- Negative: declared without an initializer, so there is no constructor call to inspect ----------------
+
+    [Test]
+    public Task DeclaredWithoutInitializer_NoDiagnostic() =>
+        CSharpAnalyzerVerifier<AvoidRedundantCollectionClearAnalyzer>.VerifyAnalyzerAsync(
+            """
+            using System.Collections.Generic;
+
+            public sealed class Sample
+            {
+                public void Run()
+                {
+                    List<long> list;
+                    list = new List<long>();
+                    list.Clear();
+                }
+            }
+            """
+        );
+
     // ---- Negative: a Collection<T> subclass overriding ClearItems() can carry a side effect -----------------
 
     [Test]

@@ -141,11 +141,9 @@ public sealed class AvoidRedundantCollectionClearAnalyzer : DiagnosticAnalyzer
     {
         cancellationToken.ThrowIfCancellationRequested();
 
-        if (local.DeclaringSyntaxReferences.Length != 1)
-        {
-            return null;
-        }
-
+        // A local symbol always has exactly one declaring syntax reference — its single declaration site —
+        // so indexing straight into it is safe; only its syntax shape (a plain 'T x = new(...)' declarator
+        // with an initializer) needs checking.
         if (
             local.DeclaringSyntaxReferences[0].GetSyntax(cancellationToken)
             is not VariableDeclaratorSyntax { Initializer.Value: { } initializerValue } declarator
@@ -166,7 +164,7 @@ public sealed class AvoidRedundantCollectionClearAnalyzer : DiagnosticAnalyzer
 
         // A local declaration always sits directly inside a 'VariableDeclarationSyntax' inside a
         // 'LocalDeclarationStatementSyntax'; that statement's own parent is the block the local is scoped to.
-        return declarator.Parent?.Parent is LocalDeclarationStatementSyntax { Parent: BlockSyntax declaringBlock }
+        return declarator.Parent!.Parent is LocalDeclarationStatementSyntax { Parent: BlockSyntax declaringBlock }
             ? declaringBlock
             : null;
     }
