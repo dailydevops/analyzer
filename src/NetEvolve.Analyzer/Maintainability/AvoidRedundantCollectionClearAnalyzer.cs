@@ -10,30 +10,15 @@ using Microsoft.CodeAnalysis.CSharp.Syntax;
 using Microsoft.CodeAnalysis.Diagnostics;
 
 /// <summary>
-/// NE0015 — reports a parameterless <c>Clear()</c> call on a local collection variable that was declared with
-/// a parameterless collection constructor (no copy-constructor argument, no collection initializer) and whose
-/// first reference after that declaration is the <c>Clear()</c> call itself. Such a call has no effect, since
-/// the instance is still empty at that point.
+/// NE0015 — reports a parameterless <c>Clear()</c> call on a local collection that was constructed with no
+/// arguments and no initializer, where the call is the first reference to that local. Such a call is a no-op.
 /// </summary>
 /// <remarks>
-/// Scope is deliberately narrow to avoid removing a call that could have a side effect:
-/// <list type="bullet">
-/// <item>Only locals are considered; a field's lifetime and aliasing are out of scope.</item>
-/// <item>The receiver's type must be exactly one of a fixed set of BCL collection types (see
-/// <see cref="AllowedCollectionMetadataNames"/>), checked by original-definition equality rather than
-/// interface implementation. A subclass — e.g. a <see cref="System.Collections.ObjectModel.Collection{T}"/>
-/// override of <c>ClearItems()</c> that logs or disposes — is deliberately excluded, since its <c>Clear()</c>
-/// behavior is no longer just "empty the list".</item>
-/// <item>A copy-constructor argument (<c>new List&lt;T&gt;(other)</c>) or a non-empty collection initializer
-/// (<c>new List&lt;T&gt; { 1, 2 }</c>) populates the instance at construction, so <c>Clear()</c> afterwards is
-/// meaningful and is left alone.</item>
-/// <item>The <c>Clear()</c> call itself must not sit inside a loop the declaration is not also inside (a
-/// reference to the local <em>after</em> the call, inside a loop the declaration isn't in, cannot have
-/// populated the instance before the call ran, so that case is still reported). Additionally, neither the
-/// call nor any other reference to the local may sit inside a lambda, an anonymous method, or a local
-/// function, where source order no longer implies execution order. The same applies if the enclosing block
-/// contains a <see langword="goto"/> or a label.</item>
-/// </list>
+/// Locals only, and only for a fixed set of BCL collection types (<see cref="AllowedCollectionMetadataNames"/>)
+/// matched by exact type identity, so a <see cref="System.Collections.ObjectModel.Collection{T}"/> subclass
+/// overriding <c>ClearItems()</c> is never touched. A loop around the <c>Clear()</c> call itself, a lambda, an
+/// anonymous method, or a local function anywhere in scope, or a <see langword="goto"/>/label in the
+/// enclosing block all disqualify the declaration, since source order then no longer implies execution order.
 /// </remarks>
 [DiagnosticAnalyzer(LanguageNames.CSharp)]
 public sealed class AvoidRedundantCollectionClearAnalyzer : DiagnosticAnalyzer
@@ -87,8 +72,6 @@ public sealed class AvoidRedundantCollectionClearAnalyzer : DiagnosticAnalyzer
         );
     }
 
-    // A bare 'x.Clear();' invocation with no arguments; anything else (used as an argument, a lambda's
-    // expression body, etc.) is left alone, since removing it outright would not be safe.
     private static IdentifierNameSyntax? GetClearReceiver(InvocationExpressionSyntax invocation)
     {
         if (invocation.ArgumentList.Arguments.Count != 0 || invocation.Parent is not ExpressionStatementSyntax)
@@ -108,8 +91,6 @@ public sealed class AvoidRedundantCollectionClearAnalyzer : DiagnosticAnalyzer
         return receiver;
     }
 
-    // The invoked method must be a genuine parameterless 'Clear()', the receiver a local, and that local's
-    // type a collection — a type with an unrelated, possibly side-effecting 'Clear()' is never flagged.
     private static ILocalSymbol? GetEmptyCollectionLocal(
         InvocationExpressionSyntax invocation,
         IdentifierNameSyntax receiver,
@@ -135,15 +116,11 @@ public sealed class AvoidRedundantCollectionClearAnalyzer : DiagnosticAnalyzer
         return IsAllowedCollectionType(local.Type, semanticModel.Compilation) ? local : null;
     }
 
-    // The local must be declared exactly once, with a parameterless constructor call and no collection
-    // initializer — either would mean the instance is already populated, so 'Clear()' is meaningful.
     private static BlockSyntax? GetDeclaringBlock(ILocalSymbol local, CancellationToken cancellationToken)
     {
         cancellationToken.ThrowIfCancellationRequested();
 
-        // A local symbol always has exactly one declaring syntax reference — its single declaration site —
-        // so indexing straight into it is safe; only its syntax shape (a plain 'T x = new(...)' declarator
-        // with an initializer) needs checking.
+        // A local symbol always has exactly one declaring syntax reference.
         if (
             local.DeclaringSyntaxReferences[0].GetSyntax(cancellationToken)
             is not VariableDeclaratorSyntax { Initializer.Value: { } initializerValue } declarator
@@ -162,8 +139,6 @@ public sealed class AvoidRedundantCollectionClearAnalyzer : DiagnosticAnalyzer
             return null;
         }
 
-        // A local declaration always sits directly inside a 'VariableDeclarationSyntax' inside a
-        // 'LocalDeclarationStatementSyntax'; that statement's own parent is the block the local is scoped to.
         return declarator.Parent!.Parent is LocalDeclarationStatementSyntax { Parent: BlockSyntax declaringBlock }
             ? declaringBlock
             : null;
@@ -182,11 +157,6 @@ public sealed class AvoidRedundantCollectionClearAnalyzer : DiagnosticAnalyzer
             _ => null,
         };
 
-    // The 'Clear()' receiver must be the very first reference to the local after its declaration (an earlier
-    // reference means the instance may already hold data), and neither it nor any other reference may sit
-    // inside a loop, a lambda, an anonymous method, or a local function, where source order no longer implies
-    // execution order. A goto/label anywhere in the block can likewise jump past or back over either
-    // statement, so its mere presence disqualifies the whole declaration.
     private static bool IsFirstAndOnlySafeUse(
         BlockSyntax declaringBlock,
         IdentifierNameSyntax receiver,
@@ -219,16 +189,13 @@ public sealed class AvoidRedundantCollectionClearAnalyzer : DiagnosticAnalyzer
             return false;
         }
 
-        // A loop around the receiver itself could run the 'Clear()' call more than once; a loop around a
-        // *later* reference cannot have populated the instance before this call already ran, so that case is
-        // still safe to report.
+        // Only the receiver's own loop membership matters: a loop around a later reference can't have
+        // populated the instance before this call already ran.
         if (CrossesBoundary(receiver, declaringBlock, IsLoop))
         {
             return false;
         }
 
-        // A lambda/anonymous method/local function can be invoked at any time relative to its surrounding
-        // source position, for any reference — including the receiver itself, if it sits inside one.
         return !references.Any(identifier => CrossesBoundary(identifier, declaringBlock, IsDeferredScope));
     }
 
@@ -256,10 +223,8 @@ public sealed class AvoidRedundantCollectionClearAnalyzer : DiagnosticAnalyzer
     private static bool IsDeferredScope(SyntaxNode node) =>
         node is AnonymousFunctionExpressionSyntax or LocalFunctionStatementSyntax;
 
-    // Exact BCL collection types only, matched by original-definition equality rather than interface
-    // implementation: a user subclass overriding the virtual 'ClearItems()' hook (e.g. a logging or
-    // disposing 'Collection<T>') would otherwise also match 'ICollection<T>', yet its 'Clear()' can carry
-    // arbitrary side effects that this rule must not delete.
+    // Exact-type match, not interface implementation: a subclass overriding 'ClearItems()' also implements
+    // 'ICollection<T>' but its 'Clear()' can carry side effects this rule must not delete.
     private static readonly string[] AllowedCollectionMetadataNames = new[]
     {
         "System.Collections.ArrayList",

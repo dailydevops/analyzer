@@ -35,9 +35,7 @@ public sealed class AvoidRedundantCollectionClearCodeFixProvider : CodeFixProvid
             .OfType<InvocationExpressionSyntax>()
             .First();
 
-        // The analyzer only ever reports a bare 'x.Clear();' statement (see
-        // AvoidRedundantCollectionClearAnalyzer.GetClearReceiver), so the invocation's parent is guaranteed
-        // to be its ExpressionStatementSyntax.
+        // The analyzer only reports a bare 'x.Clear();' statement, so the cast is safe.
         var statement = (ExpressionStatementSyntax)invocation.Parent!;
 
         context.RegisterCodeFix(
