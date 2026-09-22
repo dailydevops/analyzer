@@ -29,6 +29,15 @@ internal static class DiagnosticDescriptors
         DiagnosticCategories.Maintainability
     );
 
+    /// <summary>
+    /// NE0015 — a freshly created, still-empty collection local should not have <c>Clear()</c> called on it
+    /// before it is ever populated.
+    /// </summary>
+    public static readonly DiagnosticDescriptor AvoidRedundantCollectionClear = Create(
+        DiagnosticIds.NE0015,
+        DiagnosticCategories.Maintainability
+    );
+
     /// <summary>NE0004 — prefer the <c>is null</c> pattern over <c>== null</c>.</summary>
     public static readonly DiagnosticDescriptor UseIsNull = Create(DiagnosticIds.NE0004, DiagnosticCategories.Usage);
 

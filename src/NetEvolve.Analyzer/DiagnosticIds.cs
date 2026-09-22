@@ -39,6 +39,12 @@ internal static class DiagnosticIds
     /// </summary>
     public const string NE0003 = DiagnosticPrefix + "0003";
 
+    /// <summary>
+    /// NE0015 — a freshly created, still-empty collection local should not have <c>Clear()</c> called on it
+    /// before it is ever populated.
+    /// </summary>
+    public const string NE0015 = DiagnosticPrefix + "0015";
+
     // Usage
 
     /// <summary>
