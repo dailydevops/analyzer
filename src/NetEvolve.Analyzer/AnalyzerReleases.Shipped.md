@@ -18,3 +18,7 @@ NE0008 | Documentation | Warning | NativeTypeCrefAnalyzer, [Documentation](https
 NE0009 | Usage | Warning | RequireCancellationCheckAnalyzer, [Documentation](https://github.com/dailydevops/analyzer/blob/main/docs/rules/usage/ne0009.md)
 NE0010 | Usage | Warning | RequireCancellationTokenParameterAnalyzer, [Documentation](https://github.com/dailydevops/analyzer/blob/main/docs/rules/usage/ne0010.md)
 NE0011 | Style | Warning | AvoidRegionDirectivesAnalyzer, [Documentation](https://github.com/dailydevops/analyzer/blob/main/docs/rules/style/ne0011.md)
+NE0012 | Style | Info | RequireNumericLiteralSuffixAnalyzer, [Documentation](https://github.com/dailydevops/analyzer/blob/main/docs/rules/NE0012.md)
+NE0013 | Style | Info | UseNumericLiteralSuffixOverCastAnalyzer, [Documentation](https://github.com/dailydevops/analyzer/blob/main/docs/rules/NE0013.md)
+NE0014 | Naming | Warning | AvoidInvisibleCharactersAnalyzer, [Documentation](https://github.com/dailydevops/analyzer/blob/main/docs/rules/naming/ne0014.md)
+NE0015 | Maintainability | Warning | AvoidRedundantCollectionClearAnalyzer, [Documentation](https://github.com/dailydevops/analyzer/blob/main/docs/rules/maintainability/ne0015.md)
