@@ -13,7 +13,8 @@
       "low": 80,
       "break": 0
     },
-    "dashboard": {
+    "project-info": {
+      "name": "github.com/dailydevops/analyzer",
       "module": "NetEvolve.Analyzer.Roslyn4_14"
     }
   }
