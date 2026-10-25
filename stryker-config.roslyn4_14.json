@@ -6,6 +6,7 @@
       "test/NetEvolve.Analyzer.Tests.Unit/NetEvolve.Analyzer.Tests.Unit.csproj",
       "test/NetEvolve.Analyzer.Tests.Integration/NetEvolve.Analyzer.Tests.Integration.csproj"
     ],
+    "test-runner": "mtp",
     "mutation-level": "Complete",
     "reporters": ["dashboard", "html", "progress", "cleartext"],
     "thresholds": {
@@ -13,7 +14,8 @@
       "low": 80,
       "break": 0
     },
-    "dashboard": {
+    "project-info": {
+      "name": "github.com/dailydevops/analyzer",
       "module": "NetEvolve.Analyzer.Roslyn4_14"
     }
   }
