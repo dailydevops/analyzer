@@ -23,6 +23,7 @@ internal static class TargetFrameworkMonikers
         RegexOptions.IgnoreCase | RegexOptions.CultureInvariant,
         TimeSpan.FromSeconds(1)
     );
+
     // Stryker restore all
 
     /// <summary>

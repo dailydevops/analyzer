@@ -338,6 +338,7 @@ public sealed class RequireCancellationCheckCodeFixProvider : CodeFixProvider
             ("System", "Span"),
             ("System", "ReadOnlySpan")
         );
+
     // Stryker restore all
 
     // 'yield break;' is required (and the only legal early-exit) in an iterator method — 'return value;' does

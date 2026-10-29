@@ -240,6 +240,7 @@ public sealed class AvoidRedundantCollectionClearAnalyzer : DiagnosticAnalyzer
         "System.Collections.ObjectModel.Collection`1",
         "System.Collections.ObjectModel.ObservableCollection`1",
     };
+
     // Stryker restore all
 
     private static bool IsAllowedCollectionType(ITypeSymbol type, Compilation compilation) =>

@@ -183,6 +183,7 @@ internal static class CancellationTokenCallSites
         "System.Threading.Tasks.ValueTask`1",
         "System.Collections.Generic.IAsyncEnumerable`1",
     };
+
     // Stryker restore all
 
     private static bool IsSupportedAsyncReturnType(ITypeSymbol returnType)

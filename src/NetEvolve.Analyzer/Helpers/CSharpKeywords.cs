@@ -85,6 +85,7 @@ internal static class CSharpKeywords
         "volatile",
         "while"
     );
+
     // Stryker restore all
 
     /// <summary>
@@ -138,6 +139,7 @@ internal static class CSharpKeywords
         "with",
         "yield"
     );
+
     // Stryker restore all
 
     /// <summary>
@@ -168,6 +170,7 @@ internal static class CSharpKeywords
         "nint",
         "nuint"
     );
+
     // Stryker restore all
 
     /// <summary>
@@ -186,6 +189,7 @@ internal static class CSharpKeywords
         "DateTimeOffset",
         "TimeSpan"
     );
+
     // Stryker restore all
 
     /// <summary>

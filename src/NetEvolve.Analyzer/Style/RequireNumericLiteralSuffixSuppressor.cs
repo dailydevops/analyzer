@@ -29,6 +29,7 @@ internal sealed class RequireNumericLiteralSuffixSuppressor : NetEvolveSuppresso
         justification: "NE0012 already reports this numeric literal; suppressed to avoid a duplicate, "
             + "conflicting diagnostic from SonarAnalyzer.CSharp."
     );
+
     // Stryker restore all
 
     /// <inheritdoc />

@@ -26,6 +26,7 @@ internal sealed class UseLangwordSuppressor : NetEvolveSuppressorBase
         justification: "NE0007 already reports this <c>/<code> keyword usage; suppressed to avoid a duplicate "
             + "diagnostic from Meziantou.Analyzer."
     );
+
     // Stryker restore all
 
     /// <inheritdoc />
