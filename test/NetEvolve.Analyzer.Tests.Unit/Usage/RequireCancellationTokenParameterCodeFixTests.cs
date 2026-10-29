@@ -18,14 +18,13 @@ public sealed class RequireCancellationTokenParameterCodeFixTests
             RequireCancellationTokenParameterCodeFixProvider
         >.VerifyCodeFixAsync(
             """
-            using System.Threading;
             using System.Threading.Tasks;
 
             public sealed class Sample
             {
                 public Task {|NE0010:Run|}() => HelperAsync();
 
-                private static Task HelperAsync(CancellationToken token = default) => Task.CompletedTask;
+                private static Task HelperAsync(System.Threading.CancellationToken token = default) => Task.CompletedTask;
             }
             """,
             """
@@ -36,7 +35,7 @@ public sealed class RequireCancellationTokenParameterCodeFixTests
             {
                 public Task Run(CancellationToken cancellationToken = default) => HelperAsync(token: cancellationToken);
 
-                private static Task HelperAsync(CancellationToken token = default) => Task.CompletedTask;
+                private static Task HelperAsync(System.Threading.CancellationToken token = default) => Task.CompletedTask;
             }
             """
         );
@@ -136,14 +135,13 @@ public sealed class RequireCancellationTokenParameterCodeFixTests
             """
             namespace Sample;
 
-            using System.Threading;
             using System.Threading.Tasks;
 
             public sealed class Sample
             {
                 public Task {|NE0010:Run|}() => HelperAsync();
 
-                private static Task HelperAsync(CancellationToken token = default) => Task.CompletedTask;
+                private static Task HelperAsync(System.Threading.CancellationToken token = default) => Task.CompletedTask;
             }
             """,
             """
@@ -156,7 +154,7 @@ public sealed class RequireCancellationTokenParameterCodeFixTests
             {
                 public Task Run(CancellationToken cancellationToken = default) => HelperAsync(token: cancellationToken);
 
-                private static Task HelperAsync(CancellationToken token = default) => Task.CompletedTask;
+                private static Task HelperAsync(System.Threading.CancellationToken token = default) => Task.CompletedTask;
             }
             """
         );
@@ -452,14 +450,13 @@ public sealed class RequireCancellationTokenParameterCodeFixTests
             """
             namespace Sample
             {
-                using System.Threading;
                 using System.Threading.Tasks;
 
                 public sealed class Sample
                 {
                     public Task {|NE0010:Run|}() => HelperAsync();
 
-                    private static Task HelperAsync(CancellationToken token = default) => Task.CompletedTask;
+                    private static Task HelperAsync(System.Threading.CancellationToken token = default) => Task.CompletedTask;
                 }
             }
             """,
@@ -473,7 +470,7 @@ public sealed class RequireCancellationTokenParameterCodeFixTests
                 {
                     public Task Run(CancellationToken cancellationToken = default) => HelperAsync(token: cancellationToken);
 
-                    private static Task HelperAsync(CancellationToken token = default) => Task.CompletedTask;
+                    private static Task HelperAsync(System.Threading.CancellationToken token = default) => Task.CompletedTask;
                 }
             }
             """
@@ -543,6 +540,53 @@ public sealed class RequireCancellationTokenParameterCodeFixTests
                 private static System.Threading.Tasks.Task HelperAsync(
                     System.Threading.CancellationToken token = default
                 ) => System.Threading.Tasks.Task.CompletedTask;
+            }
+            """
+        );
+
+    [Test]
+    public Task BlockScopedNamespaceNewUsingSortsAfterAllExisting_AppendedWithIndentation() =>
+        CSharpCodeFixVerifier<
+            RequireCancellationTokenParameterAnalyzer,
+            RequireCancellationTokenParameterCodeFixProvider
+        >.VerifyCodeFixAsync(
+            """
+            namespace Sample
+            {
+                using System.Collections.Generic;
+
+                public sealed class Sample
+                {
+                    public System.Threading.Tasks.Task {|NE0010:Run|}()
+                    {
+                        _ = new List<int>();
+                        return HelperAsync();
+                    }
+
+                    private static System.Threading.Tasks.Task HelperAsync(
+                        System.Threading.CancellationToken token = default
+                    ) => System.Threading.Tasks.Task.CompletedTask;
+                }
+            }
+            """,
+            """
+            namespace Sample
+            {
+                using System.Collections.Generic;
+                using System.Threading;
+
+                public sealed class Sample
+                {
+                    public System.Threading.Tasks.Task Run(CancellationToken cancellationToken = default)
+                    {
+                        _ = new List<int>();
+                        return HelperAsync(token: cancellationToken);
+                    }
+
+                    private static System.Threading.Tasks.Task HelperAsync(
+                        System.Threading.CancellationToken token = default
+                    ) => System.Threading.Tasks.Task.CompletedTask;
+                }
             }
             """
         );
