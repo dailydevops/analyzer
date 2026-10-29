@@ -11,11 +11,11 @@ version, by four sibling projects in `src/NetEvolve.Analyzer/` that all import t
 `NetEvolve.Analyzer.Build.props` and differ only in the `RoslynApiVersion` they set:
 `NetEvolve.Analyzer.Roslyn4_4.csproj` (4.4.0), `...Roslyn4_7.csproj` (4.7.0),
 `...Roslyn4_14.csproj` (4.14.0 — the baseline), and `...Roslyn5_6.csproj` (5.6.0, latest). Both test
-projects multi-target `net8.0;net9.0;net10.0` and, per `$(TargetFramework)`, `ProjectReference` a
-*different* variant for compile-time access to the analyzer/code-fix types — `net8.0`→`Roslyn4_4`,
-`net9.0`→`Roslyn4_14`, `net10.0`→`Roslyn5_6` — so the same test suite actually runs against three
-different Roslyn APIs instead of only ever exercising one. `Roslyn4_7` isn't picked up by any
-TargetFramework (only three TFMs exist for four variants) and is therefore build-verified only.
+projects multi-target `$(_TestTargetFrameworks)` (`net6.0;net7.0;net8.0;net9.0;net10.0`, plus
+`net472;net48;net481` on Windows) and, per `$(TargetFramework)`, `ProjectReference` a *different*
+variant for compile-time access to the analyzer/code-fix types — `net8.0`→`Roslyn4_7`,
+`net9.0`→`Roslyn4_14`, `net10.0`→`Roslyn5_6`, every other TFM→`Roslyn4_4` — so the same test suite
+actually runs against all four Roslyn APIs instead of only ever exercising one.
 `NetEvolve.Analyzer.csproj` itself has no source of its own — it's a pure packing project that
 `ProjectReference`s the four builds (`ReferenceOutputAssembly="false"`) and, via the `_PackAnalyzer`
 target, packs each one into its own `analyzers/dotnet/roslynX.Y/cs` folder. .NET SDKs 8.0.400+ pick the
@@ -42,7 +42,7 @@ csharpier format .                                   # required formatting; CI e
 ```
 
 Test projects use **TUnit** on **Microsoft.Testing.Platform** (`OutputType=Exe`, multi-targeted
-`net8.0;net9.0;net10.0`), not xUnit/MSTest/VSTest. `dotnet test` works, but to filter to a single test
+`$(_TestTargetFrameworks)`), not xUnit/MSTest/VSTest. `dotnet test` works, but to filter to a single test
 run the test executable directly with the platform's own filter syntax rather than `dotnet test
 --filter`:
 
@@ -50,12 +50,13 @@ run the test executable directly with the platform's own filter syntax rather th
 dotnet run --project test/NetEvolve.Analyzer.Tests.Unit -- --treenode-filter "/*/*/OneTypePerFileAnalyzerTests/*"
 ```
 
-Mutation testing is configured via three `stryker-config.roslyn*.json` files (Stryker.NET, `mutation-level:
-Complete`, break threshold 0), one per Roslyn variant that has test coverage — `4_4`, `4_14`, `5_6` — each
-against both test projects; Stryker.NET has no native way to mutate multiple source projects from one
-config, hence the split. `4_7` has no test-project reference (see below) and is therefore build-verified
-only, not mutation-tested. Run with the `dotnet-stryker` tool, passing `--config-file
-stryker-config.roslynX_Y.json`, to verify test strength for a given variant.
+Mutation testing (Stryker.NET, `mutation-level: Complete`, break threshold 0) is configured per Roslyn
+variant: `stryker-config.json` targets `Roslyn5_6` (tested by the `net10.0` slice) and is the only config CI
+runs (`.github/workflows/mutation.yml`); `stryker-config.roslyn4_4.json` and `stryker-config.roslyn4_14.json`
+are manual-only, and there is no config for `4_7`. Each config runs against both test projects;
+Stryker.NET has no native way to mutate multiple source projects from one config, hence the split. The
+mutated source is identical across variants. To run one, use the `dotnet-stryker` tool, passing
+`--config-file <file>`.
 
 CI (`.github/workflows/cicd.yml`) delegates to a shared reusable workflow
 (`dailydevops/pipelines/.github/workflows/build-dotnet-single.yml`) that builds and tests
