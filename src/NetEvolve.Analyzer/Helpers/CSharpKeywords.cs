@@ -19,6 +19,7 @@ internal static class CSharpKeywords
     /// denotes the absence of a return type rather than an actual type, and is commonly referenced the
     /// same way as <see langword="true"/>/<see langword="false"/>/<see langword="null"/>.
     /// </summary>
+    // Stryker disable all : static initializer, not killable under the MTP runner (Stryker 5.0.0)
     public static readonly ImmutableHashSet<string> ReservedKeywords = ImmutableHashSet.Create(
         StringComparer.Ordinal,
         "abstract",
@@ -85,12 +86,15 @@ internal static class CSharpKeywords
         "while"
     );
 
+    // Stryker restore all
+
     /// <summary>
     /// Keywords that carry special meaning only in specific syntactic contexts (query clauses, patterns,
     /// declarations); the same spelling is a valid identifier everywhere else. Native type names
     /// (<see cref="nint"/>, <see cref="nuint"/>) are intentionally excluded for the same reason as in
     /// <see cref="ReservedKeywords"/>.
     /// </summary>
+    // Stryker disable all : static initializer, not killable under the MTP runner (Stryker 5.0.0)
     public static readonly ImmutableHashSet<string> ContextualKeywords = ImmutableHashSet.Create(
         StringComparer.Ordinal,
         "add",
@@ -136,12 +140,15 @@ internal static class CSharpKeywords
         "yield"
     );
 
+    // Stryker restore all
+
     /// <summary>
     /// Native/predefined C# type names, deliberately excluded from <see cref="ReservedKeywords"/> and
     /// <see cref="ContextualKeywords"/>. <see langword="void"/> is intentionally excluded here too — it denotes the
     /// absence of a return type rather than an actual type, and stays classified under
     /// <see cref="ReservedKeywords"/>.
     /// </summary>
+    // Stryker disable all : static initializer, not killable under the MTP runner (Stryker 5.0.0)
     public static readonly ImmutableHashSet<string> NativeTypeKeywords = ImmutableHashSet.Create(
         StringComparer.Ordinal,
         "bool",
@@ -164,6 +171,8 @@ internal static class CSharpKeywords
         "nuint"
     );
 
+    // Stryker restore all
+
     /// <summary>
     /// Common BCL value types that, like <see cref="NativeTypeKeywords"/>, are frequently misdocumented as
     /// <c>&lt;c&gt;type&lt;/c&gt;</c> instead of <c>&lt;see cref="type"/&gt;</c>. These are ordinary types, not
@@ -172,6 +181,7 @@ internal static class CSharpKeywords
     /// see <see cref="ConditionalBclTypeMinimumVersions"/> — since they only exist on the target frameworks
     /// that ship them.
     /// </summary>
+    // Stryker disable all : static initializer, not killable under the MTP runner (Stryker 5.0.0)
     public static readonly ImmutableHashSet<string> WellKnownBclTypeNames = ImmutableHashSet.Create(
         StringComparer.Ordinal,
         "Guid",
@@ -179,6 +189,8 @@ internal static class CSharpKeywords
         "DateTimeOffset",
         "TimeSpan"
     );
+
+    // Stryker restore all
 
     /// <summary>
     /// BCL value types that, unlike <see cref="WellKnownBclTypeNames"/>, are not available on every target
@@ -190,8 +202,10 @@ internal static class CSharpKeywords
     /// unconditionally. Different entries are free to name different minimum versions — nothing here assumes
     /// they all shipped together.
     /// </summary>
+    // Stryker disable all : static initializer, not killable under the MTP runner (Stryker 5.0.0)
     public static readonly ImmutableDictionary<string, int> ConditionalBclTypeMinimumVersions = ImmutableDictionary
         .Create<string, int>(StringComparer.Ordinal)
         .Add("DateOnly", 6)
         .Add("TimeOnly", 6);
+    // Stryker restore all
 }

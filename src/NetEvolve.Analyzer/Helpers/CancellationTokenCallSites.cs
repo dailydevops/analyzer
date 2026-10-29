@@ -174,6 +174,7 @@ internal static class CancellationTokenCallSites
         return HasUsableCancellationToken(semanticModel, localFunction.Body, localFunction.ExpressionBody?.Expression);
     }
 
+    // Stryker disable all : static initializer, not killable under the MTP runner (Stryker 5.0.0)
     private static readonly string[] SupportedAsyncReturnTypeMetadataNames =
     {
         "System.Threading.Tasks.Task",
@@ -182,6 +183,8 @@ internal static class CancellationTokenCallSites
         "System.Threading.Tasks.ValueTask`1",
         "System.Collections.Generic.IAsyncEnumerable`1",
     };
+
+    // Stryker restore all
 
     private static bool IsSupportedAsyncReturnType(ITypeSymbol returnType)
     {
