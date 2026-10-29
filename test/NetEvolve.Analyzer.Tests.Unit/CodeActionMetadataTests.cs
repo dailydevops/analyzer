@@ -216,7 +216,7 @@ public sealed class CodeActionMetadataTests
         await Assert
             .That(
                 await CodeActionProbe<AvoidInvisibleCharactersAnalyzer, AvoidInvisibleCharactersCodeFixProvider>
-                    .DescribeAsync("public sealed class My​Class { }", "NE0014")
+                    .DescribeAsync("public sealed class My\u200BClass { }", "NE0014")
                     .ConfigureAwait(false)
             )
             .IsEqualTo("Rename to 'MyClass' [NE0014.RemoveInvisibleCharacters]");
@@ -226,7 +226,7 @@ public sealed class CodeActionMetadataTests
         await Assert
             .That(
                 await CodeActionProbe<AvoidInvisibleCharactersAnalyzer, AvoidInvisibleCharactersCodeFixProvider>
-                    .DescribeAsync("﻿namespace My.Project;\n\npublic sealed class Sample { }\n", "NE0014")
+                    .DescribeAsync("\uFEFFnamespace My.Project;\n\npublic sealed class Sample { }\n", "NE0014")
                     .ConfigureAwait(false)
             )
             .IsEqualTo("Remove non-representable character [NE0014.RemoveInvisibleTextSpan]");
