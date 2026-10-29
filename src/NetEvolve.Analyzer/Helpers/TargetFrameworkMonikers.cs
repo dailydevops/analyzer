@@ -17,11 +17,13 @@ internal static class TargetFrameworkMonikers
     // — ".NETFramework" ("net472", "net48"), ".NETStandard" ("netstandard2.0", "netstandard2.1"), and
     // ".NETCoreApp" ("netcoreapp3.1") — never match: each has a non-digit character glued right after "net",
     // where this pattern requires a digit.
+    // Stryker disable all : static initializer, not killable under the MTP runner (Stryker 5.0.0)
     private static readonly Regex UnifiedTfmPattern = new(
         @"^net(?<major>\d+)\.\d+",
         RegexOptions.IgnoreCase | RegexOptions.CultureInvariant,
         TimeSpan.FromSeconds(1)
     );
+    // Stryker restore all
 
     /// <summary>
     /// Splits a comma-separated target framework list — <c>BuildProperty.TargetFrameworks</c>'s re-joined

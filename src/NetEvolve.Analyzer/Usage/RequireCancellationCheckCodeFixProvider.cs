@@ -311,6 +311,7 @@ public sealed class RequireCancellationCheckCodeFixProvider : CodeFixProvider
     // Span<T>/ReadOnlySpan<T>. Array types are handled separately (any element type, any rank). This is a
     // pragmatic subset, not the full collection-expression conversion spec (custom [CollectionBuilder] types are
     // not recognized), but covers what a guard-clause return is realistically going to need.
+    // Stryker disable all : static initializer, not killable under the MTP runner (Stryker 5.0.0)
     private static readonly ImmutableHashSet<(string Namespace, string Name)> CollectionExpressionTargetTypes =
         ImmutableHashSet.Create(
             ("System.Collections.Generic", "List"),
@@ -337,6 +338,7 @@ public sealed class RequireCancellationCheckCodeFixProvider : CodeFixProvider
             ("System", "Span"),
             ("System", "ReadOnlySpan")
         );
+    // Stryker restore all
 
     // 'yield break;' is required (and the only legal early-exit) in an iterator method — 'return value;' does
     // not compile there at all, regardless of return type. 'return;' is legal for a void-returning method, and

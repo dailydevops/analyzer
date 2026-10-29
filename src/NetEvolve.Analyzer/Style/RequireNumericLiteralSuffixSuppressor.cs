@@ -22,12 +22,14 @@ using NetEvolve.Analyzer.Helpers;
 [DiagnosticAnalyzer(LanguageNames.CSharp)]
 internal sealed class RequireNumericLiteralSuffixSuppressor : NetEvolveSuppressorBase
 {
+    // Stryker disable all : static initializer, not killable under the MTP runner (Stryker 5.0.0)
     internal static readonly SuppressionDescriptor Suppression = new(
         id: DiagnosticIds.NES0002,
         suppressedDiagnosticId: "S818",
         justification: "NE0012 already reports this numeric literal; suppressed to avoid a duplicate, "
             + "conflicting diagnostic from SonarAnalyzer.CSharp."
     );
+    // Stryker restore all
 
     /// <inheritdoc />
     public override ImmutableArray<SuppressionDescriptor> SupportedSuppressions { get; } =

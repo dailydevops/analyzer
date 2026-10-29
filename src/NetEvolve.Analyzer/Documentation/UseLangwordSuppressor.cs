@@ -19,12 +19,14 @@ using NetEvolve.Analyzer.Abstractions;
 [DiagnosticAnalyzer(LanguageNames.CSharp)]
 internal sealed class UseLangwordSuppressor : NetEvolveSuppressorBase
 {
+    // Stryker disable all : static initializer, not killable under the MTP runner (Stryker 5.0.0)
     internal static readonly SuppressionDescriptor Suppression = new(
         id: DiagnosticIds.NES0001,
         suppressedDiagnosticId: "MA0154",
         justification: "NE0007 already reports this <c>/<code> keyword usage; suppressed to avoid a duplicate "
             + "diagnostic from Meziantou.Analyzer."
     );
+    // Stryker restore all
 
     /// <inheritdoc />
     public override ImmutableArray<SuppressionDescriptor> SupportedSuppressions { get; } =

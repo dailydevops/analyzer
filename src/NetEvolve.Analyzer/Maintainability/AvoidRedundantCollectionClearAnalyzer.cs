@@ -225,6 +225,7 @@ public sealed class AvoidRedundantCollectionClearAnalyzer : DiagnosticAnalyzer
 
     // Exact-type match, not interface implementation: a subclass overriding 'ClearItems()' also implements
     // 'ICollection<T>' but its 'Clear()' can carry side effects this rule must not delete.
+    // Stryker disable all : static initializer, not killable under the MTP runner (Stryker 5.0.0)
     private static readonly string[] AllowedCollectionMetadataNames = new[]
     {
         "System.Collections.ArrayList",
@@ -239,6 +240,7 @@ public sealed class AvoidRedundantCollectionClearAnalyzer : DiagnosticAnalyzer
         "System.Collections.ObjectModel.Collection`1",
         "System.Collections.ObjectModel.ObservableCollection`1",
     };
+    // Stryker restore all
 
     private static bool IsAllowedCollectionType(ITypeSymbol type, Compilation compilation) =>
         AllowedCollectionMetadataNames
