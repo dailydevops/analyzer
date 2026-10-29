@@ -49,6 +49,25 @@ internal static class FixAllRunner
         return result;
     }
 
+    /// <summary>Returns the title of the fix-all action offered for <paramref name="sources"/>, or <see langword="null"/> when none is.</summary>
+    public static async Task<string?> FixAllTitleAsync(
+        (string Name, string Content)[] sources,
+        FixAllScope scope,
+        CancellationToken cancellationToken = default
+    )
+    {
+        using var workspace = new AdhocWorkspace();
+        var projectId = ProjectId.CreateNewId();
+        var project = BuildSolution(workspace, projectId, sources).GetProject(projectId)!;
+        var context = await CreateContextAsync(project, scope, cancellationToken).ConfigureAwait(false);
+
+        var action = await new OneTypePerFileCodeFixProvider()
+            .GetFixAllProvider()!
+            .GetFixAsync(context)
+            .ConfigureAwait(false);
+        return action?.Title;
+    }
+
     private static Solution BuildSolution(
         AdhocWorkspace workspace,
         ProjectId projectId,
