@@ -10,9 +10,9 @@
     "mutation-level": "Complete",
     "reporters": ["dashboard", "html", "progress", "cleartext"],
     "thresholds": {
-      "high": 90,
-      "low": 80,
-      "break": 0
+      "high": 75,
+      "low": 60,
+      "break": 55
     },
     "project-info": {
       "name": "github.com/dailydevops/analyzer",
