@@ -41,6 +41,19 @@ public sealed class OneTypePerFileFixAllTests
     }
 
     [Test]
+    public async Task FixAllAction_Title_NamesTheDiagnostic()
+    {
+        var title = await FixAllRunner
+            .FixAllTitleAsync(
+                [("Shapes.cs", "namespace Geometry;\n\npublic sealed class Circle { }\n")],
+                FixAllScope.Project
+            )
+            .ConfigureAwait(false);
+
+        await Assert.That(title).IsEqualTo("Fix all 'NE0001' occurrences");
+    }
+
+    [Test]
     public async Task Project_MultipleViolatingFiles_AllResolved()
     {
         const string alpha = """
