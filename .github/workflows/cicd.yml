@@ -28,7 +28,7 @@ jobs:
   all:
     if: github.run_id != 1
     name: Build & Tests
-    uses: dailydevops/pipelines/.github/workflows/build-dotnet-single.yml@d2bbde995a21b784d6bcd27584024f598f419782 # 2.5.347
+    uses: dailydevops/pipelines/.github/workflows/build-dotnet-single.yml@62fc77cfb1ce43eb55fb9ea1b29233d91d83c374 # 2.5.348
     with:
       dotnetLogging: ${{ inputs.dotnet-logging }}
       dotnetVersion: ${{ vars.NE_DOTNET_TARGETFRAMEWORKS }}
