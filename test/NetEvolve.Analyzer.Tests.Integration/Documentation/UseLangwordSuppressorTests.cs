@@ -225,8 +225,8 @@ public sealed class UseLangwordSuppressorTests
                 .Take(1)
                 .Select(element => element.GetLocation());
 
-        private readonly Func<SyntaxNode, IEnumerable<Location>> _selectLocations =
-            selectLocations ?? AllCOrCodeElements;
+        private readonly Func<SyntaxNode, IEnumerable<Location>> _selectLocations = selectLocations
+            ?? AllCOrCodeElements;
 
         public override ImmutableArray<DiagnosticDescriptor> SupportedDiagnostics { get; } =
             ImmutableArray.Create(Descriptor);

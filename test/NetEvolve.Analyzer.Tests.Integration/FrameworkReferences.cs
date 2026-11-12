@@ -18,8 +18,7 @@ internal static class FrameworkReferences
     {
         // .NET Framework (net472/net48/net481) doesn't populate TRUSTED_PLATFORM_ASSEMBLIES; fall back to
         // the assemblies already loaded into this AppDomain, which cover the BCL surface test sources need.
-        var trustedAssemblies =
-            (string?)AppContext.GetData("TRUSTED_PLATFORM_ASSEMBLIES")
+        var trustedAssemblies = (string?)AppContext.GetData("TRUSTED_PLATFORM_ASSEMBLIES")
             ?? string.Join(
                 Path.PathSeparator.ToString(),
                 AppDomain
