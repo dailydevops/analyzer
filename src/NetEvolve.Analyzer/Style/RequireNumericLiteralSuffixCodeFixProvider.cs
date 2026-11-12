@@ -92,9 +92,8 @@ public sealed class RequireNumericLiteralSuffixCodeFixProvider : CodeFixProvider
             // RS1010: the missing equivalence key is intentional here — see the comment above.
 #pragma warning disable RS1010
             context.RegisterCodeFix(
-                CodeAction.Create(
-                    $"Use the '{suffix}' suffix",
-                    cancellationToken => AddSuffixAsync(context.Document, literal, suffix, cancellationToken)
+                CodeAction.Create($"Use the '{suffix}' suffix", cancellationToken =>
+                    AddSuffixAsync(context.Document, literal, suffix, cancellationToken)
                 ),
                 diagnostic
             );
